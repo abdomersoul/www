@@ -1,0 +1,7 @@
+name = annuaire_filtrer
+description = annuaire formulaire search
+package = Annuaire
+core = 7.x
+
+files[] = annuaire_filtrer.module
+

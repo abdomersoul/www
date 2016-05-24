@@ -1,0 +1,40 @@
+
+/* ---------- Color Module Styles ----------- */
+
+body,
+body.overlay {
+  color: #3b3b3b;
+}
+.comment .comment-arrow {
+  border-color: #ffffff;
+}
+#page,
+#main-wrapper {
+  background: #f7f7f7;
+  overflow: hidden;
+}
+.tabs ul.primary li a.active {
+  background-color: #ffffff;
+}
+.tabs ul.primary li.active a {
+  background-color: #ffffff;
+  border-bottom: 1px solid #ffffff;
+}
+#header {
+
+}
+a {
+  color: #0071B3;
+}
+a:hover,
+a:focus {
+  color: #018fe2;
+}
+a:active {
+  color: #23aeff;
+}
+
+#page-wrapper,
+#footer-wrapper {
+  background: #0f283a;
+}

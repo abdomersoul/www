@@ -1,0 +1,214 @@
+<?php
+/**
+ * Implements hook_block_info().
+ */
+
+
+function exportateur_menu() {
+
+  $items = array();
+
+  $items['listexportateur'] = array(
+    'title' => 'Résultat de votre recherche',
+    'page callback' => 'list_content',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['detailsexportateur'] = array(
+    'title' => '',
+    'page callback' => 'details_content',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+function list_content($delta = '') {
+
+  $view = "<div id='votreselection'></div>";
+  $view .="<div id='listId'><ul class='list'>";
+
+  db_set_active('db2');
+
+    
+    //echo var_dump($_SESSION["search"]);
+      
+    $query = "SELECT distinct * FROM exportateur e";      
+  
+    if(isset($_SESSION["search"]["produits"]) && !empty($_SESSION["search"]["produits"])){
+      $query .= " INNER JOIN exportateur_sfam_produit ep ON e.Id_Exportateur = ep.Id_Exportateur";
+    }
+    if(isset($_SESSION["search"]["regions"]) && !empty($_SESSION["search"]["regions"])){
+      $query .= " INNER JOIN exportateur_marche er ON e.Id_Exportateur = er.Id_Exportateur";
+    }
+    if(isset($_SESSION["search"]["pays"]) && !empty($_SESSION["search"]["pays"])){
+      $query .= " INNER JOIN exportateur_pays_destination epd ON e.Id_Exportateur = epd.Id_Exportateur";
+    }
+
+    $query .= " WHERE e.Id_Exportateur IS NOT NULL";
+
+    if(isset($_SESSION["search"]["produits"]) && !empty($_SESSION["search"]["produits"])){
+        foreach ($_SESSION["search"]["produits"] as $p){
+          $query .= " AND ep.NSFAM = ".$p;
+        }
+    }
+    if(isset($_SESSION["search"]["regions"]) && !empty($_SESSION["search"]["regions"])){
+        foreach ($_SESSION["search"]["regions"] as $r){
+          $query .= " AND er.Num_Marche = ".$r;
+        }
+    }
+    if(isset($_SESSION["search"]["pays"]) && !empty($_SESSION["search"]["pays"])){
+        foreach ($_SESSION["search"]["pays"] as $p){
+          $query .= " AND epd.Id_Pays_Destination = ".$p;
+        }
+    }
+
+    if(isset($_SESSION["search"]["raisonsociale"]) && !empty($_SESSION["search"]["raisonsociale"])){
+          $query .= " AND e.DESEXPT LIKE '%".$_SESSION["search"]["raisonsociale"]."%'";
+    }
+ 
+
+
+    //echo var_dump($query);
+    $results = db_query($query);
+        foreach ($results as $res){   
+          $view .="<li id='".$res->Id_Exportateur."'>
+                                <img class='simg' src='/sites/default/files/".$res->Img."'>
+                                <span class='abonnement gold'></span>
+                                <h3>".$res->DESEXPT."</h3>
+                                <p>Adresse : ".$res->ADRESSE."</p>
+                                <p>Tél : ".$res->TEL."</p>
+                                <p>Ville : ".$res->VILLE."</p>
+                                <a href='/detailsexportateur?expid=".$res->Id_Exportateur."'>Afficher plus...</a>
+                                <span id='".$res->Id_Exportateur."' class='sdevis'>Sélectionner pour devis</span>
+                              </li>";
+        }
+  db_set_active();
+  $view .="</ul></div>";
+   
+  drupal_add_js('jQuery(document).ready(function(){
+
+          jQuery("span.sdevis").click(function(){
+            jQuery(this).toggleClass("check");
+          });
+
+  
+  });', 'inline');
+ 
+  return $view;
+}
+
+
+
+/**
+* Detais Exportateur
+**/
+function details_content($delta = '') {
+
+  $view = "";
+
+    db_set_active('db2');
+
+      $query = db_select('exportateur', 'e')
+        ->condition('Id_Exportateur', $_GET["expid"],'=')
+        ->fields('e');
+        
+      $count_results = $query->execute()->rowCount();
+
+      $results = $query->execute()->fetchObject();
+      
+    db_set_active();
+
+  if(isset($_GET["expid"]) && $count_results > 0){
+
+    $view .= "<div class='expdetails'>";
+    $view .="<img class='simg' src='/sites/default/files/".$results->Img."'>";
+    $view .="<h1 id='page-title'>".$results->DESEXPT."</h1>";
+    $view .="<span class='abonnement gold'></span>";
+    $view .= "<a href='#' class='plusinfo'>Plus d'infos</a>";
+    $view .="<ul><li><span class='label'>Secteur :</span><span></span></li>";
+    $view .="<li><span class='label'>Ville :</span><span>".$results->VILLE."</span></li>";
+    $view .="<li><span class='label'>Adresse :</span><span>".$results->ADRESSE."</span></li>";
+    $view .="<li><span class='label'>Tél :</span><span>".$results->TEL."</span></li>";
+    $view .="<li><span class='label'>Fax :</span><span>".$results->FAX."</span></li>";
+    $view .="<li><span class='label'>Mail :</span><span>".$results->Mail."</span></li>";
+    $view .="<li><span class='label'>Site web :</span><span>".$results->Site_Web."</span></li>";
+    $view .="<li><span class='label'>Contact :</span><span>".$results->Contact."</span></li></ul>";
+    $view .= "</div>";
+
+    $view .= "<div class='exptabs'>";
+   $view .= "<div class='tabs'><a href='tab1' class='active'>PRÉSENTATION</a><a href='tab2'>produits</a><a href='tab3'>MARQUES</a>"."<a href='tab4'>MARCHES</a><a href='tab5'>CERTIFICATIONS</a></div>";
+    
+    $view .= "<div id='tab1' class='conttab'>
+                <span class='span1'><span class='label'>Description : </span>".$results->Description."</span>
+                <span class='span3'><span class='label'>Directeur Général :</span>".$results->Directeur_Genaral."</span><span class='span3'><span class='label'>Tél :</span></span><span class='span3'><span class='label'>E-mail :</span>".$results->Mail."</span>
+                <span class='span1'><span class='label'>Effectif du personnel:</span>".$results->Effectif."</span>
+                <span class='span1'><span class='label'>Capital social :</span>".$results->Capital."</span>
+                <span class='span1'><span class='label'>Affiliation : </span>".$results->Affiliation."</span>
+                <span class='span3'><span class='label'>Responsable export :</span>".$results->RESP."</span><span class='span3'><span class='label'>Tél :</span>".$results->Tel_Resp."</span><span class='span3'><span class='label'>E-mail :</span>".$results->Mail_Resp."</span>
+                <span class='span1'><span class='label'>Forme juridique :</span></span>
+                <p class='hide'>space</p>
+              </div>";
+
+    
+    /* tab produit */
+    
+    db_set_active('db2');
+    $query = "SELECT * FROM produit_final pf INNER JOIN exportateur_produit ep ON pf.Id_Produit = ep.Id_Produit WHERE ep.Id_Exportateur = ".$_GET["expid"];
+    $results = db_query($query);
+    db_set_active();
+    
+    $view .= "<div id='tab2' class='conttab'><h3>Liste des produits :</h3><ul>";
+    foreach ($results as $res){
+      $view .="<li>".$res->DESPROD."</li>";
+    }
+    $view .="</ul></div>";
+
+
+    /* Tab Marques*/
+
+    db_set_active('db2');
+    $query = "SELECT * FROM marque m INNER JOIN exportateur_marque em ON m.Id_Marque = em.Id_Marque WHERE em.Id_Exportateur = ".$_GET["expid"];
+    $results = db_query($query);
+    db_set_active();
+
+    $view .= "<div id='tab3' class='conttab'><h3>Liste des marques :</h3><ul>";
+    foreach ($results as $res){
+      $view .="<li>".$res->DESMRQ."</li>";
+    }
+    $view .="</ul></div>";
+
+
+
+    $view .= "<div id='tab4' class='conttab'><h3>Liste des marches :</h3></div>";
+    $view .= "<div id='tab5' class='conttab'><h3>Liste des certifs :</h3></div>";
+
+    $view .= "<a href='/listexportateur' class='rtr'>Retour vers la recherche</a>";
+    $view .= "<p class='hide'>space</p><p class='hide'>space</p>";
+
+    $view .= "</div>";
+
+
+
+     drupal_add_js('jQuery(document).ready(function(){
+          jQuery("div.conttab").hide();
+          jQuery("div#tab1").show();
+          jQuery(".exptabs .tabs a").click(function(){
+            jQuery("div.conttab").hide();
+            jQuery(".exptabs .tabs a").removeClass("active");
+            jQuery(this).addClass("active");
+            jQuery("div#"+jQuery(this).attr("href")).show();
+            return false;
+          });
+
+  
+  });', 'inline');
+                                
+    //echo var_dump($results);
+
+  }
+  else $view ="Exportateur Introuvable";
+
+  return $view;
+}

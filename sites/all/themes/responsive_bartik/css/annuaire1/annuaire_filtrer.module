@@ -1,0 +1,202 @@
+<?php
+
+ 
+/**
+ * Implements hook_block_info().
+ */
+function annuaire_filtrer_block_info() {
+  $blocks = array();
+
+  $blocks['annuaire_filtrer'] = array(
+    'info' => t('Annuiare formulaire de Recherche'), 
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function annuaire_filtrer_block_view($delta = '') {
+  $block = array();
+
+  $block['subject'] = t('Filtrer par');
+  $block['content'] = drupal_get_form('annuaire_filtrer_form');
+ 
+  return $block;
+}
+
+
+function annuaire_filtrer_form($form, &$form_state) {
+
+
+  db_set_active('db2');
+
+    /** Liste des produit **/
+
+   $query = db_select('sous_famille_produit', 'p')
+      ->fields('p', array('NSFAM', 'DESSFAM'));
+
+    $results = $query->execute();
+
+    $produits = array();
+    foreach ($results as $result) {
+      $produits[$result->NSFAM] = $result->DESSFAM;
+    }
+
+    /** Liste des Régions **/
+    $query = db_select('marche', 'r')
+      ->distinct()
+      ->fields('r', array('Num_Marche', 'New_Marche'));
+
+    $results = $query->execute();
+
+    $regions = array();
+    foreach ($results as $result) {
+      $regions[$result->Num_Marche] = $result->New_Marche;
+    }
+
+    /** Liste des pays **/
+    $query = db_select('pays_destination', 'p')
+      ->fields('p', array('Id_Pays_Destination', 'DESPAYD'));
+
+    $results = $query->execute();
+
+    $pays = array();
+    foreach ($results as $result) {
+      $pays[$result->Id_Pays_Destination] = $result->DESPAYD;
+    }
+
+    /** Liste des certifs **/
+    /*$query = db_select('certification', 'c')
+      ->fields('c', array('Id_Certif', 'Des_Certif'));
+
+    $results = $query->execute();
+
+    $certifs = array();
+    foreach ($results as $result) {
+      $certifs[$result->Id_Certif] = $result->Des_Certif;
+    }*/
+
+  db_set_active();
+
+   $default_values_produits = '';
+  $default_values_regions = '';
+  $default_values_pays = '';
+  $default_values_raisonsociale = '';
+  //unset($_SESSION["search"]);
+
+  if(isset($_SESSION["search"]["produits"]) && !empty($_SESSION["search"]["produits"])){
+    foreach ($_SESSION["search"]["produits"] as $p) $default_values_produits[] = $p;
+    $default_values_produits = explode(',',$_SESSION["search"]["produits"]);    
+  }    
+
+  if(isset($_SESSION["search"]["regions"]) && !empty($_SESSION["search"]["regions"])) 
+    foreach ($_SESSION["search"]["regions"] as $p) $default_values_regions[] = $p;
+
+  if(isset($_SESSION["search"]["pays"]) && !empty($_SESSION["search"]["pays"]) ) 
+    foreach ($_SESSION["search"]["pays"] as $p) $default_values_pays[] = $p;
+
+  if(isset($_SESSION["search"]["raisonsociale"]) && !empty($_SESSION["search"]["raisonsociale"]) ) 
+    $default_values_raisonsociale = $_SESSION["search"]["raisonsociale"];
+
+
+  $typef = array('1' => t('Fabricant/conditionneur'), '2' => t('Négociant'), '3' => t('GIE/ coopérative'));
+
+  $form['produits'] = array(
+    '#type' => 'select',
+    '#title' => t('Produits'),
+    '#attributes' => array('Class' => 'input tokenize-sample', 'multiple' => 'multiple','name' => 'produits[]'),
+    '#options' => $produits,
+    '#default_value' => $default_values_produits,
+  );
+
+  $form['regions'] = array(
+    '#type' => 'select',
+    '#title' => t('Régions'),
+    '#attributes' => array('Class' => 'input tokenize-sample', 'multiple' => 'multiple','name' => 'regions[]'),
+    '#options' => $regions,
+    '#default_value' => $default_values_regions,
+  );
+
+  $form['pays'] = array(
+    '#type' => 'select',
+    '#title' => t('Pays'),
+    '#attributes' => array('Class' => 'input tokenize-sample', 'multiple' => 'multiple','name' => 'pays[]'),
+    '#options' => $pays,
+    '#default_value' => $default_values_pays,
+  );
+  
+  $form['typef'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Type fournisseurs'),
+
+    '#options' => $typef,
+    '#multiple' => TRUE,
+  );
+
+
+  /*$form['certif'] = array(
+    '#type' => 'select',
+    '#title' => t('Certifications'),
+    '#attributes' => array('Class' => 'input tokenize-sample', 'multiple' => 'multiple','name' => 'certif[]'),
+    '#options' => $certifs,
+  );*/
+  
+  $form['raisonsociale'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Raison sociale'),
+    '#default_value' => $default_values_raisonsociale,
+  );
+
+   $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Rechercher'),
+    '#attributes' => array('id' => 'btnsubmit', 'Class' => 'btnsubmit'),
+  );
+
+  $form['#validate'][] = 'annuaire_filtrer_form_validate';
+
+   drupal_add_js('jQuery(document).ready(function(){
+          
+          //jQuery("#btnsubmit").click(function(){
+            jQuery("select#edit-produits").prop("selected", false);
+            jQuery("select#edit-produits").find("option").removeAttr("selected");
+            jQuery("select#edit-produits").find("option:selected").removeAttr("selected");
+         // });
+
+  
+  });', 'inline');
+                   
+
+  return $form;
+}
+
+function annuaire_filtrer_form_validate($form, &$form_state){
+
+session_destroy($_SESSION["search"]);
+
+}
+
+
+function annuaire_filtrer_form_submit($form, &$form_state){
+
+
+    
+    session_destroy($_SESSION["search"]);
+    unset($_SESSION["search"]['raisonsociale']);
+    unset($_SESSION["search"]['produits']);
+    unset($_SESSION["search"]['regions']);
+
+  if (count($form_state['values']['produits']) > 0) $_SESSION["search"]["produits"] = implode(",",$form_state['values']['produits']);
+  if (count($form_state['values']['regions']) > 0) $_SESSION["search"]["regions"] = $form_state['values']['regions'];
+  if (count($form_state['values']['pays']) > 0) $_SESSION["search"]["pays"] = $form_state['values']['pays'];
+  if ($form_state['values']['raisonsociale'] != '') $_SESSION["search"]["raisonsociale"] = $form_state['values']['raisonsociale'];
+
+  /*if (isset($_SESSION["search"]["produits"])) foreach ($_SESSION["search"]["produits"] as $p) $_SESSION["default_value"]["produits"] = $p;
+  if (isset($_SESSION["search"]["regions"])) foreach ($_SESSION["search"]["regions"] as $r) $_SESSION["default_value"]["regions"] = $r;
+  if (isset($_SESSION["search"]["pays"])) foreach ($_SESSION["search"]["pays"] as $p) $_SESSION["default_value"]["pays"] = $p;*/
+
+    
+}
+

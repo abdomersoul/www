@@ -1,0 +1,88 @@
+<?php
+/**
+ * Implements hook_block_info().
+ */
+function annuaire_search_block_info() {
+  $blocks = array();
+
+  $blocks['annuaire_recherche'] = array(
+    'info' => t('Annuiare Recherche'), 
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function annuaire_search_block_view($delta = '') {
+  $block = array();
+
+  $block['subject'] = t('Recherche de résultats');
+  $block['content'] = "<div id='votreselection'></div>";
+
+ 
+
+  $block['content'] .="<div id='listId'><ul class='list'>";
+
+  
+  /*db_set_active('db2');
+
+  $query = db_select('exportateur', 'e')
+    ->extend('PagerDefault')
+    ->fields('e', array('Id_Exportateur', 'DESEXPT'))
+    ->limit(10);
+
+  $results = $query->execute();
+
+  $rows = array();
+  foreach ($results as $result) {
+    $rows[] = array($result->Id_Exportateur, $result->DESEXPT);
+  }
+  echo var_dump($rows);
+  $output = theme(
+    'table',
+    array(
+      'header' => array(t('Id'), t('Title')),
+      'rows' => $rows,
+    )
+  );
+
+  $block['content'] .= theme('pager');
+
+  db_set_active();*/
+
+  db_set_active('db2');
+
+      $query = db_select('exportateur', 'e')
+        ->extend('PagerDefault')
+        ->fields('e', array('Id_Exportateur', 'DESEXPT', 'IMG'))
+        ->limit(10);
+
+      $results = $query->execute();
+
+  
+        foreach ($results as $res){   
+          $block['content'] .="<li id='".$res->Id_Exportateur."'>
+                                <img class='simg' src='/sites/default/files/".$res->IMG."'>
+                                <span class='abonnement gold'></span>
+                                <h3>".$res->DESEXPT."</h3>
+                                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. ...</p>
+                                <a href='#?".$res->Id_Exportateur."'>Afficher plus...</a>
+                                <span id='".$res->Id_Exportateur."' class='sdevis'>Selectionner pour devis</span>
+                              </li>";
+        }
+  db_set_active();
+  $block['content'] .="</ul></div>";
+   
+  drupal_add_js('jQuery(document).ready(function(){
+
+          jQuery("span.sdevis").click(function(){
+            jQuery(this).toggleClass("check");
+          });
+
+  
+  });', 'inline');
+ 
+  return $block;
+}

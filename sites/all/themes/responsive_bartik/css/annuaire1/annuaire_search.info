@@ -1,0 +1,7 @@
+name = annuaire search
+description = annuaire_search
+package = Annuaire
+core = 7.x
+
+files[] = annuaire_search.module
+

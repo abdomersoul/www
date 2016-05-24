@@ -1,0 +1,41 @@
+<?php
+/**
+ * Implements hook_block_info().
+ */
+function annuaire_recherche_block_info() {
+  $blocks = array();
+
+  $blocks['annuaire_recherche'] = array(
+    'info' => t('Annuiare Recherche'), 
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function annuaire_recherche_block_view($delta = '') {
+  $block = array();
+
+  $block['subject'] = t('');
+  $block['content'] = drupal_get_form('annuaire_recherche_form');
+
+  return $block;
+}
+
+/**
+ * Custom form.
+ */
+function annuaire_recherche_form($form, &$form_state) {
+  
+  $form['searchword'] = array(
+    '#type' => 'textfield',
+    '#attributes' => array('Placeholder' => 'Produit, Activité, Nom, Pays', 'Class' => 'input'),
+  );
+
+  $form['#prefix'] = '<div id="mserach">';
+  $form['#suffix'] = '<div id="linkserach" class="block"><a href="/listexportateur" class="passoublie">Recherche avancée</a><a href="/listexportateur" class="modpass">Recherche par zone</a></div></div>';
+
+  return $form;
+}
