@@ -1,0 +1,411 @@
+<?php
+/**
+ * Implements hook_block_info().
+ */
+function preinscription_menu() {
+  $items = array();
+
+  $items['preinscription'] = array(
+    'title' => 'Inscription en ligne',
+    'page callback' => 'preinscription_content',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+function preinscription_content(){
+
+  return drupal_get_form('preinscription_form');
+
+}
+
+
+function preinscription_form($form, &$form_state) {
+
+  db_set_active('db2');
+  /** Liste des villes **/
+    $query = db_select('exportateur', 'e')
+      ->distinct()
+      ->fields('e', array('VILLE'));
+
+    $results = $query->execute();
+
+    $villes = array("-1" => "Sélectionner");
+    foreach ($results as $result) {
+     if($result->VILLE != "") $villes[$result->VILLE] = $result->VILLE;
+    }
+
+  /** Liste des secteurs **/
+    $query = db_select('export', 'e')
+      ->distinct()
+      ->fields('e', array('Secteur'));
+
+    $results = $query->execute();
+
+   // $secteurs = array("-1" => "Sélectionner");
+    foreach ($results as $result) {
+      $secteurs[$result->Secteur] = $result->Secteur;
+    }
+
+    /** Liste des type **/
+    $query = db_select('exportateur', 'e')
+      ->distinct()
+      ->fields('e', array('TYPEXP'));
+
+    $results = $query->execute();
+
+    $types = array("Négociant" => "Négociant", "Fabricant" => "Fabricant");
+    /*foreach ($results as $result) {
+      if($result->TYPEXP != "") $types[$result->TYPEXP] = $result->TYPEXP;
+    }*/
+db_set_active();
+
+  
+  $form['#attributes'] = array('enctype' => "multipart/form-data");
+
+   $form['#attached']['js'] = array(
+    drupal_get_path('module', 'recherche_rapide') . '/script.js',
+  );
+
+  /**
+  *
+  /******** Informations générales *********
+  *
+  **/
+
+  $form['infosgeneral'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Informations générales : '),
+    '#collapsible' => FALSE, // Added
+    '#collapsed' => FALSE,  // Added
+    '#attributes' => array('Class' => 'fieldsetdev'),
+  );
+
+
+  $form['infosgeneral']['raisonsociale'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Raison sociale'),
+    '#attributes' => array('Placeholder' => 'Raison sociale', 'Class' => 'input'),
+    '#required' => TRUE,
+  );
+
+  $form['infosgeneral']['secteur'] = array(
+    '#type' => 'select',
+    '#title' => t('Secteur'),
+    '#attributes' => array('placeholder' => 'Secteur', 'Class' => 'input'),
+    '#options' => $secteurs,
+    '#required' => TRUE,
+  );
+
+  $form['infosgeneral']['type'] = array(
+    '#type' => 'select',
+    '#title' => t('Type'),
+    '#attributes' => array('placeholder' => 'Type', 'Class' => 'input'),
+    '#options' => $types,
+    '#required' => TRUE,
+  );
+
+  $form['infosgeneral']['tel'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Tél'),
+    '#attributes' => array('Placeholder' => 'Téléphone', 'Class' => 'input numerique'),
+    '#required' => TRUE,
+  );
+
+  $form['infosgeneral']['adresse'] = array(
+    '#title' => t('Adresse'),
+    '#type' => 'textarea',
+    '#rows' => 2,
+    '#cols' => 62,
+    '#resizable' => FALSE,
+    '#attributes' => array('maxlength' => 100),
+    '#required' => TRUE,
+  );
+
+
+  $form['infosgeneral']['ville'] = array(
+    '#type' => 'select',
+    '#title' => t('Ville'),
+    '#attributes' => array('placeholder' => 'Ville', 'Class' => 'input'),
+    '#options' => $villes,
+    '#required' => TRUE,
+  );
+
+  
+
+  $form['infosgeneral']['fax'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Fax'),
+    '#attributes' => array('Placeholder' => 'Fax', 'Class' => 'input numerique'),
+    '#required' => TRUE,
+  );
+
+  /**
+  *
+  /******** Informations d\'identification *********
+  *
+  **/
+  $form['infosident'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Informations d\'identification : '),
+    '#collapsible' => FALSE, // Added
+    '#collapsed' => FALSE,  // Added
+    '#attributes' => array('Class' => 'fieldsetdev'),
+  );
+
+  $form['infosident']['nar_eacce'] = array(
+    '#type' => 'textfield',
+    '#title' => t('N° agrément EACCE'),
+    '#required' => TRUE,
+    '#attributes' => array('Placeholder' => 'N° agrément EACCE', 'Class' => 'input'),
+  );
+
+    $form['infosident']['ar_eacce'] = array(
+      '#title' => t('Agrément EACCE '),
+      '#type' => 'managed_file',
+      '#upload_location' => 'public://',
+      '#attributes' => array('Placeholder' => 'Agrément EACCE', 'Class' => 'input'),
+    );
+
+   $form['infosident']['nar_onssa'] = array(
+    '#type' => 'textfield',
+    '#title' => t('N° agrément ONSSA'),
+    '#attributes' => array('Placeholder' => 'N° agrément ONSSA', 'Class' => 'input'),
+  );
+
+  $form['infosident']['ar_onssa'] = array(
+    '#type' => 'managed_file',
+    '#upload_location' => 'public://',
+    '#title' => t('Agrément ONSSA '),
+    '#attributes' => array('Placeholder' => 'Agrément ONSSA', 'Class' => 'input'),
+  );
+
+   $form['infosident']['nar_rc'] = array(
+    '#type' => 'textfield',
+    '#title' => t('N° RC'),
+    '#attributes' => array('Placeholder' => 'N° RC', 'Class' => 'input'),
+  );
+
+  $form['infosident']['ar_rc'] = array(
+    '#type' => 'managed_file',
+    '#upload_location' => 'public://',
+    '#title' => t('RC '),
+    '#attributes' => array('Placeholder' => 'RC', 'Class' => 'input'),
+  );
+
+
+  /**
+  *
+  /******** Informations d\'authentification *********
+  *
+  **/
+  $form['infosauth'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Informations d\'authentification: '),
+    '#collapsible' => FALSE, // Added
+    '#collapsed' => FALSE,  // Added
+    '#attributes' => array('Class' => 'fieldsetdev'),
+  );
+
+  $form['infosauth']['email'] = array(
+    '#title' => 'Adresse mail (Compte)',
+    '#type' => 'textfield',
+    '#attributes' => array('Placeholder' => 'Adresse mail', 'Class' => 'input'),
+    '#required' => TRUE,
+  );
+
+  $form['infosauth']['password'] = array(
+    '#type' => 'password_confirm',
+    '#required' => TRUE,
+  );
+
+  $form['obligatoire'] = array(
+    '#type' => 'markup',
+    '#markup' => '<div class="obligatoire">Les champs en (*) sont obligatoires</div>',
+  );
+  /** Bouton submit  **/
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('S’inscrire'),
+    '#attributes' => array('id' => 'btnsubmit', 'Class' => 'btnsubmit'),
+  );
+
+  $form['#validate'][] = 'preinscription_form_validate';
+
+  return $form;
+}
+
+function preinscription_form_validate($form, &$form_state){
+
+
+
+  db_set_active('db2');
+
+    $q = "SELECT count(*) as nrow FROM exportateur WHERE DESEXPT = :rc";
+    $res_sc = db_query($q, array(':rc' => $form_state['values']['raisonsociale'] ))->fetchObject();
+
+    $q = "SELECT count(*) as nrow FROM exportateur WHERE Mail = :mail";
+    $res_mail = db_query($q, array(':mail' => $form_state['values']['email'] ))->fetchObject();
+
+    $q = "SELECT count(*) as nrow FROM exportateur WHERE N_EACCE = :n";
+    $res_eacce = db_query($q, array(':n' => $form_state['values']['nar_eacce'] ))->fetchObject();
+
+    $q = "SELECT count(*) as nrow FROM exportateur WHERE N_ONSSA = :n";
+    $res_onssa = db_query($q, array(':n' => $form_state['values']['nar_onssa'] ))->fetchObject();
+
+    $q = "SELECT count(*) as nrow FROM exportateur WHERE N_RC = :n";
+    $res_rc = db_query($q, array(':n' => $form_state['values']['nar_rc'] ))->fetchObject();
+
+  db_set_active();
+
+  $error_messages = array();
+
+
+  if ($form_state['values']['raisonsociale'] != '')
+    if ($res_sc->nrow > 0)  $error_messages["body"][] = 'Raison sociale déja existe';// form_set_error('', 'Raison sociale déja existe');
+
+
+  if ($form_state['values']['email'] != ''){
+
+    if (!preg_match("#^[a-zA-Z0-9._-]+@[a-z0-9._-]{2,}\.[a-z]{2,4}$#", $form_state['values']['email']))
+      form_set_error('','L\'adresse mail n\'est pas valide.');
+    else
+      if ($res_mail->nrow > 0) $error_messages["body"][] = 'E-mail déja existe';
+  }
+  
+  if ($form_state['values']['tel'] != '')
+    if (!preg_match("#^0[0-9]{9}$#", $form_state['values']['tel']))
+      $error_messages["body"][] = 'Le numéro de téléphone n\'est pas valide.'; //form_set_error('',' Le numéro de téléphone n\'est pas valide.');
+
+  if ($form_state['values']['fax'] != '')
+    if (!preg_match("#^0[0-9]{9}$#", $form_state['values']['fax']))
+      form_set_error('',' Le numéro de fax n\'est pas valide.');
+
+  if ($form_state['values']['nar_eacce'] != '')
+    if ($res_eacce->nrow > 0) $error_messages["body"][] = 'Le N° agrément EACCE existe déja';
+
+  if ($form_state['values']['nar_onssa'] != '')
+    if ($res_onssa->nrow > 0) $error_messages["body"][] = 'Le N° agrément ONSSA existe déja';
+
+  if ($form_state['values']['nar_rc'] != '')
+    if ($res_rc->nrow > 0) $error_messages["body"][] = 'Le N° RC existe déja';  
+
+
+  foreach ($error_messages as $element => $messages) {
+    form_set_error($element, theme('item_list', array('items' => $messages)));
+  }
+}
+
+function preinscription_form_submit($form, &$form_state){
+
+ try 
+ {
+  if (!empty($form_state['values']['ar_eacce'])) 
+  {
+      $file_eacce = file_load($form_state['values']['ar_eacce']);
+      $file_eacce->status = 0;
+      $file_name_eacce = $file_eacce->filename;
+      file_save($file_eacce);
+      $usage = file_usage_list($file_eacce);
+  }
+  if (!empty($form_state['values']['ar_onssa'])) 
+  {
+      $file_onssa = file_load($form_state['values']['ar_onssa']);
+      $file_onssa->status = 0;
+      $file_name_onssa = $file_onssa->filename;
+      file_save($file_onssa);
+      $usage = file_usage_list($file_onssa);
+  }
+  if (!empty($form_state['values']['ar_rc'])) 
+  {
+      $file_rc = file_load($form_state['values']['ar_rc']);
+      $file_rc->status = 0;
+      $file_name_rc = $file_rc->filename;
+      file_save($file_rc);
+      $usage = file_usage_list($file_rc);
+  }
+  
+  
+  
+    db_set_active('db2');
+
+    $res = db_query("SELECT max(Id_Exportateur) as idexp FROM exportateur")->fetchObject();
+
+
+    $values = array(
+                ':Id_Exportateur' => $res->idexp+1,
+                ':NEXPT' => $res->idexp+1,
+                ':DESEXPT' => $form_state['values']['raisonsociale'],
+                ':ADRESSE'=> $form_state['values']['adresse'],
+                ':Ville' => $form_state['values']['ville'],
+                ':TEL' => $form_state['values']['tel'], 
+                ':FAX' => $form_state['values']['fax'], 
+                ':Mail' => $form_state['values']['email'], 
+                ':typeexpo' => $form_state['values']['type'], 
+                ':NagrementEACCE' => $form_state['values']['nar_eacce'], 
+                ':agrementEACCE' => $file_name_eacce, 
+                ':NagrementONSSA' => $form_state['values']['nar_onssa'], 
+                ':agrmentONSSA' => $file_name_onssa, 
+                ':NagrementRC' => $form_state['values']['nar_rc'], 
+                ':agrementRC' => $file_name_rc,
+                ':status' => "Encours",
+                ':date_insc' => date("Y-m-d"),
+                ':secteur' => $form_state['values']['secteur'],
+                ':pass' => md5($form_state['values']['password']),
+				':role' => 'exportateur',
+              );
+  
+    $q = "INSERT INTO exportateur(Id_Exportateur, NEXPT, DESEXPT, ADRESSE, Ville, TEL, FAX, Mail, TYPEXP, N_EACCE, AR_EACCE, N_ONSSA, AR_ONSSA, N_RC, AR_RC, ACTIVED, date_insc,SECTEUR,PASSWORD,Role) 
+                          VALUES(:Id_Exportateur, :NEXPT, :DESEXPT, :ADRESSE, :Ville, :TEL, :FAX, :Mail, :typeexpo, :NagrementEACCE, :agrementEACCE, :NagrementONSSA, :agrmentONSSA, :NagrementRC, :agrementRC, :status, :date_insc,:secteur,:pass,:role)";
+    $res_sc = db_query($q, $values);
+
+    db_set_active();
+
+
+    //drupal_set_message(t('Votre préinscription a bien été effectuée.'));
+
+    $from = 'abdelhadimersoul@gmail.com';
+    $body[] = 'Votre demande d\'inscription a été bien enregistrée. Un mail de confirmation vous sera envoyé dès validation de l\'administrateur.';
+    $to  = 'abdelhadimersoul@gmail.com, hamdoune@eacce.org.ma ,'.$form_state["values"]["email"];
+    $params = array(
+      'body' => $body,
+      'subject' => 'Demande d\'inscription reçu',
+    );
+   
+    if (drupal_mail('preinscription_form', 'some_mail_key', $to, language_default(), $params, $from, TRUE))
+    {
+      $options = array('query' => array('mail_preinscription' => $form_state['values']['email'] ));
+      drupal_goto("espace_exportateur_abonnement",$options);
+    }
+
+
+
+    } catch (Exception $e) 
+    {
+      die($e->getmessage());
+    }
+
+  
+  
+}
+
+function preinscription_form_mail($key, &$message, $params) {
+
+  $headers = array(
+    'MIME-Version' => '1.0',
+    'Content-Type' => 'text/html; charset=UTF-8;',
+    'Content-Transfer-Encoding' => '8Bit',
+    'X-Mailer' => 'Drupal'
+  );
+
+  foreach ($headers as $key => $value) {
+    $message['headers'][$key] = $value;
+  }
+
+  $message['subject'] = $params['subject'];
+  $message['body'] = $params['body'];
+}
+    
+    

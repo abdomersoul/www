@@ -1,0 +1,7 @@
+name = demande de devis
+description = Formulaire de demande des devis
+package = Annuaire
+core = 7.x
+
+files[] = devis.module
+

@@ -1,0 +1,7 @@
+name = preinscription
+description = preinscription exportateur
+package = Annuaire
+core = 7.x
+
+files[] = preinscription.module
+

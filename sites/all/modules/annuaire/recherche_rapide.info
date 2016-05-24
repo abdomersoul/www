@@ -1,0 +1,6 @@
+name = recherche rapide
+description = rechercherapide
+package = Annuaire
+core = 7.x
+
+files[] = recherche_rapide.module

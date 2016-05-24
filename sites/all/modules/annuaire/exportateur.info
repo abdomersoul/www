@@ -1,0 +1,7 @@
+name = exportateur
+description = infos exportateur
+package = Annuaire
+core = 7.x
+
+files[] = exportateur.module
+

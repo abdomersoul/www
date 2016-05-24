@@ -1,0 +1,83 @@
+<?php
+/**
+ * Implements hook_block_info().
+ */
+function recherche_rapide_block_info() {
+  $blocks = array();
+
+  $blocks['annuaire_recherche'] = array(
+    'info' => t('Annuiare Recherche'), 
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function recherche_rapide_block_view($delta = '') {
+  $block = array();
+
+  $block['subject'] = t('');
+  $block['content'] = drupal_get_form('recherche_rapide_form');
+
+  return $block;
+}
+
+/**
+ * Custom form.
+ */
+function recherche_rapide_form($form, &$form_state) {
+ 
+  $form['searchword'] = array(
+    '#type' => 'textfield',
+    '#minlength' => 3,
+    '#attributes' => array('Placeholder' => 'Produit, Activité, Nom, Pays', 'Class' => 'input'),
+  );
+
+  $s1titre = "Lancer la recherche";
+  $s2titre = "Recherche guidée";
+  global $language ;
+  $lang_name = $language->language ;
+
+  if($lang_name == "fr") $s1titre = "Lancer la recherche" ;  
+  if($lang_name == "en") $s1titre = "Search" ;  
+  if($lang_name == "ar") $s1titre = "البحث" ;  
+
+  if($lang_name == "fr") $s2titre = "Recherche guidée" ;  
+  if($lang_name == "en") $s2titre = "guided Search" ;  
+  if($lang_name == "ar") $s2titre = "البحث الموجه" ;  
+
+
+   $form['#attached']['js'] = array(
+    drupal_get_path('module', 'recherche_rapide') . '/script.js',
+  );
+
+
+  $form['submit1'] = array(
+    '#type' => 'submit',
+    '#value' => $s1titre,
+  );
+
+   $form['submit2'] = array(
+    '#type' => 'submit',
+    '#value' => $s2titre,
+    '#submit' => array('recherche_rapide_form2_submit'),
+  );
+
+  $form['#prefix'] = '<div id="mserach">';
+  $form['#suffix'] = '</div>';
+
+  return $form;
+}
+
+
+function recherche_rapide_form_submit($form, &$form_state){
+  
+  $options = array('query' => array('searchtype' => 'rr','word' => $form_state["values"]["searchword"]));
+  drupal_goto("listexportateur",$options);
+}
+
+function recherche_rapide_form2_submit($form, &$form_state){
+  drupal_goto("recherche_avance");
+}

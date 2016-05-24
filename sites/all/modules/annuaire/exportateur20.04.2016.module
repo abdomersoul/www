@@ -1,0 +1,506 @@
+<?php
+/**
+ * Implements hook_block_info().
+ */
+
+
+function exportateur_menu() {
+
+  $items = array();
+
+  $items['listexportateur'] = array(
+    'title' => 'Résultat de votre recherche',
+    'page callback' => 'list_content',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['detailsexportateur'] = array(
+    'title' => '',
+    'page callback' => 'details_content',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+function list_content($delta = '') {
+
+  $view = "";
+
+  
+
+  db_set_active('db2');
+
+    /** Liste des produits ***/
+    $listProduit = "";
+    $pdata = db_query("SELECT distinct Code_Produit,Produit FROM export   Order by Produit")->fetchAll();
+    foreach ($pdata as $p) {
+      $listProduit .= "<option value='".$p->Code_Produit."'>".$p->Produit."</option>";
+    }
+
+    /** Liste des regions ***/
+    $listRegions = "";
+    $mdata = db_query("SELECT distinct code_dest_marche,dest_marche FROM export Order by dest_marche")->fetchAll();
+    foreach ($mdata as $m) {
+      $listRegions .= "<option value='".$m->code_dest_marche."'>".$m->dest_marche."</option>";
+    }
+
+    /** Liste des pays ***/
+    $listpays = "";
+    $mdata = db_query("SELECT distinct code_dest_pays,dest_pays FROM export Order by dest_pays")->fetchAll();
+    foreach ($mdata as $m) {
+      $listpays .= "<option value='".$m->code_dest_pays."'>".$m->dest_pays."</option>";
+    }
+
+
+    
+	//$query="SELECT distinct e.reference_exportateur as idexpo, e.Exportateur as nomexpo, e.code_dest_marche, e.code_dest_pays,e.Code_Produit, p.ADRESSE, p.VILLE, p.TEL,p.Img
+	$query="SELECT distinct e.reference_exportateur as idexpo, e.Exportateur as nomexpo, p.ADRESSE, p.VILLE, p.TEL,p.Img
+	        FROM export e
+            INNER JOIN exportateur p ON e.reference_exportateur = p.nexpt
+            WHERE ( e.reference_exportateur IS NOT NULL";
+	$queryh="SELECT count(distinct e.reference_exportateur) as NombreResultats
+			FROM export e
+            INNER JOIN exportateur p ON e.reference_exportateur = p.nexpt
+            WHERE ( e.reference_exportateur IS NOT NULL";		
+
+    if (isset($_GET["searchtype"])) {
+      switch ($_GET["searchtype"]) {
+          case "rr":
+
+              if (isset($_GET["word"]) && !empty($_GET["word"])) {
+
+                $word = addslashes($_GET["word"]);
+                $query1 .=" AND e.Exportateur LIKE '%".$word."%' 
+                          OR e.Produit LIKE '%".$word."%'   
+                          OR e.produit_famille LIKE '%".$word."%'
+                          OR e.produit_sousfamille LIKE '%".$word."%'
+                          OR e.dest_pays LIKE '%".$word."%' 
+                          OR e.Secteur LIKE '%".$word."%'";
+
+                $terme = explode(" ",$_GET["word"]);
+               // print_r($terme);
+
+                foreach ($terme as $key => $value) {
+                  if(strlen($value) > 3){
+                    $querystr =" AND e.Exportateur LIKE '%".addslashes($value)."%' 
+                          OR e.Produit LIKE '%".addslashes($value)."%' 
+                           OR e.produit_famille LIKE '%".addslashes($value)."%' 
+                            OR e.produit_sousfamille LIKE '%".addslashes($value)."%' 
+                          OR e.dest_pays LIKE '%".addslashes($value)."%' 
+                          OR e.Secteur LIKE '%".addslashes($value)."%'";
+                  }
+                }
+
+                $query.=$querystr;
+				$query .=" ) ";
+                $queryh.=$querystr;
+				$queryh .=" ) ";
+				
+                
+                require_once('requete.php');
+                $query .= getWhere($word);
+				$queryh .= getWhere($word);
+				//Hamdoune ajout de order by et de LIMIT NumeroDepart, Page de 10 
+				$pagination = (isset($_GET['page'])) ? $_GET['page']-1 : 0 ;
+				$query .=" order by e.exportateur, e.reference_exportateur limit " .$pagination .",10";
+				
+             
+              }
+            // echo $query;
+             // die();
+              break;
+          case "ra":
+                $fill = false;
+
+                if (isset($_GET["filierproduit"]) && $_GET["filierproduit"] != '-1') {
+                   $query .=" AND e.SECTEUR = '".$_GET["filierproduit"]."'";
+				   $queryh .=" AND e.SECTEUR = '".$_GET["filierproduit"]."'";
+                   $fill = true;
+                }
+                if (isset($_GET["familleproduit"]) && $_GET["familleproduit"] != '-1') {
+                   $query .=" AND e.code_famille = ".$_GET["familleproduit"];
+				   $queryh .=" AND e.code_famille = ".$_GET["familleproduit"];
+                   $fill = true;
+                }
+                if (isset($_GET["sousfamilleproduit"]) && $_GET["sousfamilleproduit"] != '-1') {
+                   $query .=" AND e.code_sousfamille = ".$_GET["sousfamilleproduit"];
+				    $queryh .=" AND e.code_sousfamille = ".$_GET["sousfamilleproduit"];
+                }
+                if (isset($_GET["produit"]) && $_GET["produit"] != '-1') {
+                   $query .=" AND e.Code_Produit = ".$_GET["produit"];
+				    $queryh .=" AND e.Code_Produit = ".$_GET["produit"];
+                }
+                if (isset($_GET["marche"]) && $_GET["marche"] != '-1') {
+                   $query .=" AND e.code_dest_marche = ".$_GET["marche"];
+				   $queryh .=" AND e.code_dest_marche = ".$_GET["marche"];
+                    $fill = true;
+                }
+                if (isset($_GET["pays"]) && $_GET["pays"] != '-1') {
+                   $query .=" AND e.code_dest_pays = ".$_GET["pays"];
+				   $queryh .=" AND e.code_dest_pays = ".$_GET["pays"];
+                }
+                if (isset($_GET["raisonsociale"]) && $_GET["raisonsociale"] != '') {
+                   $query .=" AND e.Exportateur LIKE '%".$_GET["raisonsociale"]."%'";
+				   $queryh .=" AND e.Exportateur LIKE '%".$_GET["raisonsociale"]."%'";
+                    $fill = true;
+                }
+                $query .=" ) ";
+				$queryh .=" ) ";
+				$pagination = (isset($_GET['page'])) ? $_GET['page']-1 : 0 ;
+				$query .=" order by e.exportateur, e.reference_exportateur limit " .$pagination .",10";
+
+              break;
+          default: drupal_goto('<front>');
+      }
+    }else{
+
+         $query="SELECT distinct e.reference_exportateur as idexpo, e.Exportateur as nomexpo, e.code_dest_marche, e.code_dest_pays,e.Code_Produit, p.ADRESSE, p.VILLE, p.TEL,p.Img
+            FROM export e
+            INNER JOIN exportateur p ON e.reference_exportateur = p.nexpt
+            WHERE e.reference_exportateur IS NOT NULL";
+    }
+
+   
+   // echo $query;
+	//echo $queryh;
+    //exit();
+	$data = db_query($query)->fetchAll();
+	
+	$NombreResultats = 0;
+	if($_GET["searchtype"] == "rr"){
+		if($_SESSION["cont"]["word"] != $_GET["word"]){
+	
+			$datacount = db_query($queryh)->fetchAll();
+			$_SESSION["cont"]["nres"] = $datacount[0]->NombreResultats;
+			$NombreResultats =  $_SESSION["cont"]["nres"];
+			$_SESSION["cont"]["word"] = $_GET["word"];
+			
+		}
+		else {
+			$NombreResultats =  $_SESSION["cont"]["nres"];
+		}
+		
+	}
+								
+	if($_GET["searchtype"] == "ra"){
+		if($_SESSION["cont"]["filierproduit"] != $_GET["filierproduit"] || $_SESSION["cont"]["familleproduit"] != $_GET["familleproduit"] ||
+			$_SESSION["cont"]["sousfamilleproduit"] != $_GET["sousfamilleproduit"] || $_SESSION["cont"]["produit"] != $_GET["produit"] || $_SESSION["cont"]["marche"] != $_GET["marche"]
+			|| $_SESSION["cont"]["pays"] != $_GET["pays"] || $_SESSION["cont"]["raisonsociale"] != $_GET["raisonsociale"] ){
+	
+			$datacount = db_query($queryh)->fetchAll();
+			$_SESSION["cont"]["nres"] = $datacount[0]->NombreResultats;
+			$NombreResultats =  $_SESSION["cont"]["nres"];
+			$_SESSION["cont"]["filierproduit"] = $_GET["filierproduit"];
+			$_SESSION["cont"]["familleproduit"] = $_GET["familleproduit"];
+			$_SESSION["cont"]["sousfamilleproduit"] = $_GET["sousfamilleproduit"];
+			$_SESSION["cont"]["produit"] = $_GET["produit"];
+			$_SESSION["cont"]["marche"] = $_GET["marche"];
+			$_SESSION["cont"]["pays"] = $_GET["pays"];
+			$_SESSION["cont"]["raisonsociale"] = $_GET["raisonsociale"];
+			echo "execute";
+		}
+		else {
+			$NombreResultats =  $_SESSION["cont"]["nres"];
+		}
+		
+	}
+	
+	
+	
+     
+//echo var_dump($datacount[0]->NombreResultats);
+
+    $res = array();
+
+    db_set_active();
+
+  
+    foreach ($data as $d) {
+
+      $res[$d->idexpo]["id"] = $d->idexpo;
+      $res[$d->idexpo]["nom"] = $d->nomexpo;
+      $res[$d->idexpo]["adresse"] = $d->ADRESSE;
+      $res[$d->idexpo]["tel"] = $d->TEL;
+      $res[$d->idexpo]["ville"] = $d->VILLE;
+      $res[$d->idexpo]["img"] = $d->Img;
+      $res[$d->idexpo]["idp"] = array();
+      $res[$d->idexpo]["idr"] = array();
+      $res[$d->idexpo]["idy"] = array();
+     /* foreach ($data as $p) {
+        if ( $d->idexpo == $p->idexpo)
+          if(!in_array($p->Code_Produit,$res[$d->idexpo]["idp"]))
+            $res[$d->idexpo]["idp"][] = $p->Code_Produit;
+
+          if(!in_array($p->code_dest_marche,$res[$d->idexpo]["idr"]))
+            $res[$d->idexpo]["idr"][] = $p->code_dest_marche;
+
+          if(!in_array($p->code_dest_pays,$res[$d->idexpo]["idy"]))
+            $res[$d->idexpo]["idy"][] = $p->code_dest_pays;
+      }*/
+    }
+
+    //echo json_encode($res);
+    //echo "<br>";
+    $res = array_values($res);
+   //echo json_encode($res);
+   //exit();
+    drupal_add_js('res1 = '. json_encode($data) , 'inline');
+    drupal_add_js('res = '. json_encode($res) , 'inline');
+    drupal_add_js("https://ajax.googleapis.com/ajax/libs/angularjs/1.5.0-rc.1/angular.min.js");
+    drupal_add_js(drupal_get_path("module","preinscription")."/dirPagination.js");
+    drupal_add_css("//maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css");
+    
+    drupal_add_js(drupal_get_path("module","preinscription")."/angular.js");
+
+   
+
+  
+    $word = $_GET["word"];
+	
+    $view .= "<div id='test' ng-controller='Ctrl1' ng-init=\"inputsearch='".$word."' \">";
+    $view .= "<span id='affrecherche'></span>";
+    $view .= $NombreResultats." Résultats correspondant à votre recherche";
+    $view .= "<div class='zonetope'><div id='formsearch'>
+                  <form method='get' action='listexportateur'>
+                      <input type='hidden' name='searchtype' value='rr' />
+                      <input type='text' name='word' ng-model='inputsearch' />
+
+                      <input type='submit' class='lancerserach' value='Lancer la recherche' />
+                        <a href='/recherche_avance'>recherche guidée</a>
+                  </form>
+              </div>";
+			  
+	$view .= "<ul class='pagination'>";
+	//if(!isset($_GET['page'])) $view .= '<li class="active"><a href="#">1</a></li>';
+	$v = (isset($_GET['page'])) ? $_GET['page'] : 99999 ;
+	for($i=0;$i<$NombreResultats;$i+=10){
+		$nbpage = ($i/10)+1;
+		if($_GET['page'] == ($i+1) || $v == 99999) {
+			$view .= '<li class="active"><a href="#">'. $nbpage .'</a></li>';
+			$v = 0;
+		}
+		else{
+			if($_GET['searchtype'] == "rr")
+				$view .= '<li><a href="http://'.$_SERVER[HTTP_HOST].'/listexportateur?searchtype=rr&word='.$_GET['word'].'&page='.($i+1) .'">'. $nbpage .'</a></li>';
+			if($_GET['searchtype'] == "ra")
+				$view .= '<li><a href="http://'.$_SERVER[HTTP_HOST].'/listexportateur?searchtype=ra&filierproduit='.$_GET['filierproduit'].
+								'&familleproduit='.$_GET['familleproduit'].'&sousfamilleproduit='.$_GET['sousfamilleproduit'].
+								'&produit='.$_GET['produit'].'&marche='.$_GET['marche'].'&pays='.$_GET['pays'].'&raisonsociale='.$_GET['raisonsociale'].'&page='.($i+1) .'">'. $nbpage .'</a></li>';
+				
+		}
+	}
+	$view .= "</ul>";
+    //$view .= '<div class="pagination toppagination"><dir-pagination-controls max-size="10" direction-links="true" boundary-links="true" ></dir-pagination-controls></div>';
+    //$view .= "<div class='sidebar-filter'><h2>Critère de recherche</h2>";
+	$view .= "<div class='sidebar-filter'>";
+    //$view .= '<p><label>Produit</label><select class="tokenize-sample" multiple="multiple" name="produits[]" ng-model="produits">'.$listProduit.'</select></p>';
+    //$view .= '<p><label>Marché</label><select class="tokenize-sample" multiple="multiple" name="region[]" ng-model="regions">'.$listRegions.'</select></p>';
+    //$view .= '<p><label>Pays</label><select class="tokenize-sample" multiple="multiple" name="pays[]" ng-model="pays">'.$listpays.'</select></p>';
+    //$view .='<p><label>Raison sociale : </label><input type="text" ng-model="rc" class="input rc" placeholder="Raison sociale"></p>';
+    $view .='<div id="votreselection"><h2>Votre sélection pour demande de cotation</h2><div id="selection">
+              <ul>
+                <li ng-repeat="es in exposelect">{{es}} </li>
+              </ul>
+             <form name="formexpos" action="/demande-de-devis" method="post">
+              <input type="hidden" name="emaildevis" value="{{exposelect}}" />
+              <input type="submit" class="rtr"  value="Demande de cotation" />
+             </form>
+              </div></div>';
+    $view .= "</div></div>";
+
+
+    $view .= '<ul class="list ang">';
+    $view .= '<li dir-paginate="r in res | filter : {nom:rc} | fProd:produits | fReg:regions | fPays:pays | itemsPerPage:10">
+                <img class="simg" src="/sites/default/files/{{r.img}}">
+                <span class="abonnement gold"></span>
+                    <h3><a href="/detailsexportateur?expid={{r.id}}">{{r.nom}}</a></h3>
+                    <p>Adresse : {{r.adresse}}</p>
+                    <p>Tél : {{r.tel}}</p>
+                    <p>Ville : {{r.ville}}</p>
+                    <a href="/detailsexportateur?expid={{r.id}}" class="affplus">Afficher plus...</a>
+                    <label class="sdevis"><input type="checkbox" ng-checked="exposelect.indexOf(r.nom) > -1" ng-click="toggleSelection(r.nom)" >Demande de cotation</label>
+                    <!--<span data-id="{{r.id}}" data-nom="{{r.nom}}" class="sdevis">Sélectionner pour devis</span>-->
+
+              </li>';
+    $view .= "</ul>";
+     $view .="<p class='vide' ng-show='(res | filter:{nom:rc} | fProd:produits | fReg:regions | fPays:pays).length == 0'>Aucun exportateur trouvé pour votre recherche, veuillez réessayer.</p>";
+    //$view .= '<div class="pagination"><dir-pagination-controls max-size="10" direction-links="true" boundary-links="true" ></dir-pagination-controls></div>';
+     $view .= "<ul class='pagination'>";
+	//if(!isset($_GET['page'])) $view .= '<li class="active"><a href="#">1</a></li>';
+	$v = (isset($_GET['page'])) ? $_GET['page'] : 99999 ;
+	for($i=0;$i < $NombreResultats;$i+=10){
+		$nbpage = ($i/10)+1;
+		if($_GET['page'] == ($i+1) || $v == 99999) {
+			$view .= '<li class="active"><a href="#">'. $nbpage .'</a></li>';
+			$v = 0;
+		}
+		else $view .= '<li><a href="http://'.$_SERVER[HTTP_HOST].'/listexportateur?searchtype='.$_GET['searchtype'].'&word='.$_GET['word'].'&page='.($i+1) .'">'. $nbpage .'</a></li>';
+	}
+	$view .= "</ul>";
+	 
+	 $view .= '</div>';
+  
+
+  return $view;
+}
+
+
+
+/**
+* Detais Exportateur
+**/
+function details_content($delta = '') {
+
+  drupal_add_js(drupal_get_path("module","preinscription")."/script.js");
+  $view = "";
+
+    db_set_active('db2');
+
+   $idexp = $_GET["expid"];
+
+      $query = db_select('exportateur', 'e')
+        ->condition('e.NEXPT', $idexp  ,'=')
+        ->fields('e');
+        
+      $count_results = $query->execute()->rowCount();
+
+      $results = $query->execute()->fetchObject();
+
+     $query = db_select('export', 'e')
+        ->condition('e.reference_exportateur', $idexp  ,'=')
+        ->fields('e');
+
+      $res = $query->execute()->fetchObject();
+    db_set_active();
+
+  if($count_results > 0){
+
+    $view .= "<div class='expdetails'>";
+
+    $uri = 'public://'.$idexp.'_logo.png';
+    if (file_exists($uri))  $view .="<img class='simg' src='/sites/default/files/".$idexp."_logo.png'>";
+    else $view .="<img class='simg' src='/sites/default/files/p1.jpg'>";
+
+    //$view .="<img class='simg' src='/sites/default/files/".$results->Img."'>";
+    $view .= "<a href='javascript: history.go(1)' class='rtr'>Retour vers la recherche</a>";
+    $view .="<h1 id='page-title'>".$results->DESEXPT."</h1>";
+
+
+    $uri = 'public://'.$idexp.'_IMG.png';
+    if (file_exists($uri))
+    $view .="<img class='pimg' src='/sites/default/files/".$idexp."_IMG.png'>";
+    
+    $view .="<span class='abonnement gold'></span>";
+    $view .="<ul><li><span class='label'>Secteur :</span><span>".$res->Secteur."</span></li>";
+    $view .="<li><span class='label'>Ville :</span><span>".$results->VILLE."</span></li>";
+    $view .="<li><span class='label'>Adresse :</span><span>".$results->ADRESSE."</span></li>";
+    $view .="<li><span class='label'>Tél :</span><span>".$results->TEL."</span></li>";
+    $view .="<li><span class='label'>Fax :</span><span>".$results->FAX."</span></li>";
+    $view .="<li><span class='label'>Mail :</span><span>".$results->Mail."</span></li>";
+    $view .="<li><span class='label'>Site web :</span><span>".$results->Site_Web."</span></li>";
+
+    $view .= "</div>";
+
+    $view .= "<div class='exptabs'>";
+   $view .= "<div class='tabs'><a href='tab1' class='active'>PRÉSENTATION</a><a href='tab2'>produits</a><a href='tab3'>MARQUES</a>"."<a href='tab4'>MARCHES</a><a href='tab5'>CERTIFICATIONS</a></div>";
+    
+    $view .= "<div id='tab1' class='conttab'>
+
+                <span class='span1'><span class='label'>Description : </span>".$results->Description."</span>
+                <span class='span3'><span class='label'>Dirigeant  :</span>".$results->Directeur_Genaral."</span><span class='span3'><span class='label'>Tél :</span></span><span class='span3'><span class='label'>E-mail :</span>".$results->Mail."</span>
+                <span class='span1'><span class='label'>Effectif du personnel:</span>".$results->Effectif."</span>
+                <span class='span1'><span class='label'>Capital social :</span>".$results->Capital."</span>
+                <span class='span1'><span class='label'>Affiliation : </span>".$results->Affiliation."</span>
+                <span class='span3'><span class='label'>Responsable export :</span>".$results->RESP."</span><span class='span3'><span class='label'>Tél :</span>".$results->Tel_Resp."</span><span class='span3'><span class='label'>E-mail :</span>".$results->Mail_Resp."</span>
+                <span class='span1'><span class='label'>Forme juridique :</span></span>
+                <p class='hide'>space</p>
+              </div>";
+
+    
+    /* tab produit */
+    
+    db_set_active('db2');
+    $query = "SELECT distinct Produit FROM export WHERE reference_exportateur = '".$_GET["expid"]."' Order by Produit";
+    $results = db_query($query);
+    db_set_active();
+    
+    $view .= "<div id='tab2' class='conttab'><h3>Liste des produits :</h3><ul>";
+    foreach ($results as $res){
+      if( $res->Produit != "INCONNU") $view .="<li>".$res->Produit."</li>";
+    }
+    $view .="</ul></div>";
+
+
+    /* Tab Marques*/
+
+    db_set_active('db2');
+    $query = "SELECT distinct Marque
+              FROM export
+              WHERE reference_exportateur = '".$_GET["expid"]."' Order by Marque";
+    $results = db_query($query);
+    db_set_active();
+
+     $view .= "<div id='tab3' class='conttab'><h3>Liste des marques utilisées:</h3><ul>";
+     foreach ($results as $res){
+      if( $res->Marque != "INCONNU") $view .="<li>".$res->Marque."</li>";
+    }
+    $view .="</ul></div>";
+
+    /* TAB MMARCHE */
+
+    db_set_active('db2');
+    $query = "SELECT distinct dest_marche FROM export WHERE reference_exportateur = '".$_GET["expid"]."' Order by dest_marche";
+    $results = db_query($query);
+    db_set_active();
+
+    $view .= "<div id='tab4' class='conttab'><h3>Liste des marches :</h3><ul>";
+     foreach ($results as $res){
+       if ( $res->dest_marche != "INCONNU") $view .="<li>".$res->dest_marche."</li>";
+      
+    }
+    $view .="</ul></div>";
+
+    /* TAB LISTE CERTIF */
+
+     db_set_active('db2');
+    $query = "SELECT distinct TabCertification 
+              FROM exportateur
+              WHERE NEXPT = '".$_GET["expid"]."' Order by TabCertification";
+    $results = db_query($query);
+    db_set_active();
+
+    $view .= "<div id='tab5' class='conttab'><h3>Liste des certifs :</h3><ul>";
+    foreach ($results as $res){
+       if( $res->TabCertification != "INCONNU") $view .="<li>".$res->TabCertification."</li>";
+    }
+    $view .="</ul></div>";
+
+    $view .= "<p class='hide'>space</p><p class='hide'>space</p>";
+
+    $view .= "</div>";
+
+
+
+     drupal_add_js('jQuery(document).ready(function(){
+          jQuery("div.conttab").hide();
+          jQuery("div#tab1").show();
+          jQuery(".exptabs .tabs a").click(function(){
+            jQuery("div.conttab").hide();
+            jQuery(".exptabs .tabs a").removeClass("active");
+            jQuery(this).addClass("active");
+            jQuery("div#"+jQuery(this).attr("href")).show();
+            return false;
+          });
+
+  
+  });', 'inline');
+                                
+    //echo var_dump($results);
+
+  }
+  else $view ="Exportateur Introuvable";
+
+  return $view;
+}

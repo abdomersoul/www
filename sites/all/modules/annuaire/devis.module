@@ -1,0 +1,217 @@
+<?php
+
+ 
+/**
+ * Implements hook_block_info().
+ */
+function devis_block_info() {
+  $blocks = array();
+
+  $blocks['devis'] = array(
+    'info' => t('Formulaire de demande des devis'), 
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function devis_block_view($delta = '') {
+  $block = array();
+
+  $block['subject'] = t('demande de devis');
+  $block['content'] = drupal_get_form('devis_form');
+ 
+  return $block;
+}
+
+
+function devis_form($form, &$form_state) {
+
+//echo var_dump($_POST["emaildevis"]);
+  $obj = json_decode($_POST["emaildevis"]);
+
+  $exposname = "";
+  $exposmail = "achebak.radouane@gmail.com";
+  $exposid = array();
+
+  db_set_active('db2');
+    foreach ($obj as $item) {
+      
+      $exposname .= "<li>".$item."</li>";
+
+       
+
+      $query = db_select('exportateur', 'e')
+        ->distinct()
+        ->condition('e.DESEXPT', $item  ,'=')
+        ->fields('e', array('Id_Exportateur','Mail'));
+
+      $results = $query->execute()->fetchObject();
+
+      if($results->Mail != null){
+        $exposmail .=", ".$results->Mail;
+        $exposid[] = $results->Id_Exportateur;
+      }
+
+    }
+
+  /** Liste des pays **/
+    $query = db_select('export', 'e')
+      ->distinct()
+      ->orderBy('dest_pays', 'ASC')
+      ->fields('e', array('dest_pays'));
+
+    $results = $query->execute();
+
+    $pays = array("-1" => "Sélectionner");
+    foreach ($results as $result) {
+     if($result->dest_pays != "") $pays[$result->dest_pays] = $result->dest_pays;
+    }
+
+  //echo var_dump($exposid);
+  db_set_active();
+  
+  $form['#prefix'] = '<div class="exposnameselectionner"><h2>Votre sélection pour demande de cotation : </h2><ul>'.$exposname.'</ul></div>';
+
+  $form['name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Nom et prénom'),
+    //'#attributes' => array('Class' => $_POST["emaildevis"]),
+  );
+
+  $form['societe'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Société'),
+    '#attributes' => array('Class' => 'input'),
+  );
+
+  $form['fonction'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Fonction'),
+    '#attributes' => array('Class' => 'input'),
+  );
+
+  $form['tel'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Tél'),
+    '#attributes' => array('Class' => 'input'),
+  );
+
+  $form['email'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Email'),
+    '#attributes' => array('Class' => 'input'),
+  );
+
+  $form['pays'] = array(
+    '#type' => 'select',
+    '#title' => t('Pays'),
+    '#attributes' => array('Class' => 'input'),
+    '#options' => $pays,
+  );
+  
+  $form['message'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Message'),
+    '#attributes' => array('Class' => 'input'),
+  );
+
+  $form['exposid'] = array(
+    '#type' => 'hidden',
+    '#default_value' => $exposid, //$_POST["emaildevis"],
+  );
+
+  $form['exposmail'] = array(
+    '#type' => 'hidden',
+    '#default_value' => $exposmail,
+  );
+
+   $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Envoyer'),
+    '#attributes' => array('id' => 'btnsubmit', 'Class' => 'btnsubmit'),
+  );                   
+
+  $form['#attached']['js'] = array(
+    drupal_get_path('module', 'recherche_avance') . '/script.js',
+  );
+
+  return $form;
+}
+
+function devis_form_validate($form, &$form_state) {
+  if (!valid_email_address($form_state['values']['email'])) {
+    form_set_error('email', t('Adresse e-mail est pas valable.'));
+  }
+}
+
+function devis_form_mail($key, &$message, $params) {
+
+  $headers = array(
+    'MIME-Version' => '1.0',
+    'Content-Type' => 'text/html; charset=UTF-8;',
+    'Content-Transfer-Encoding' => '8Bit',
+    'X-Mailer' => 'Drupal'
+  );
+
+  foreach ($headers as $key => $value) {
+    $message['headers'][$key] = $value;
+  }
+
+  $message['subject'] = $params['subject'];
+  $message['body'] = $params['body'];
+}
+
+
+function devis_form_submit($form, &$form_state){
+
+  $exportid = explode(' ', $form_state["values"]["exposid"]);
+
+try{
+  db_set_active('db2');
+
+  foreach ($exportid as $id) {
+      
+      $values = array(
+            ':nom' => $form_state['values']['name'],
+            ':societe'=> $form_state['values']['societe'],
+            ':fonction' => $form_state['values']['fonction'],
+            ':tel' => $form_state['values']['tel'], 
+            ':mail' => $form_state['values']['email'], 
+            ':pays' => $form_state['values']['pays'],
+            ':message' => $form_state['values']['message'],
+            ':Id_Exportateur' => $id,
+          );
+
+      $q = "INSERT INTO export_devis(nom, societe, fonction, tel, mail, pays, message, Id_Exportateur) 
+                          VALUES(:nom, :societe, :fonction, :tel, :mail, :pays, :message, :Id_Exportateur)";
+      $res_sc = db_query($q, $values);
+
+  }
+
+    db_set_active();
+} catch (Exception $e) { die($e->getmessage()); }
+
+
+  $valid_email = $form_state['values']['email'];
+  $from = $valid_email;
+  $body[] = 'Email: '.$valid_email;
+  //$to  = $form_state["values"]["exposmail"];
+  $to  = 'r.achebak@uniforce.ma, hamdoune@eacce.org.ma';
+  $params = array(
+    'body' => $body,
+    'subject' => 'Website Information Request',
+  );
+ 
+  if (drupal_mail('devis_form', 'some_mail_key', $to, language_default(), $params, $from, TRUE))
+    {
+        drupal_set_message('Thanks, we will be in contact with more information soon.');     
+    } else {
+        drupal_set_message('There was an error subscribing you. Please try again later');
+  }
+  
+/*//return drupal_render(drupal_get_form('devis_form')); */
+    
+}

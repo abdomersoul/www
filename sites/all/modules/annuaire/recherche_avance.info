@@ -1,0 +1,7 @@
+name = recherche_avance
+description = annuaire formulaire recherche avance
+package = Annuaire
+core = 7.x
+
+files[] = recherche_avance.module
+

@@ -1,0 +1,43 @@
+<?php
+
+ 
+/**
+ * Implements hook_block_info().
+ */
+function annuaire_filtrer_block_info() {
+  $blocks = array();
+
+  $blocks['annuaire_filtrer'] = array(
+    'info' => t('Annuiare formulaire de Recherche'), 
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function annuaire_filtrer_block_view($delta = '') {
+  $block = array();
+
+  $block['subject'] = t('Filtrer par');
+  $block['content'] = drupal_get_form('annuaire_filtrer_form');
+ 
+  return $block;
+}
+
+
+function annuaire_filtrer_form($form, &$form_state) {
+
+
+  $produits = array("1"=>"produit1","2"=>"produit2","3"=>"produit3","4"=>"produit4","5"=>"produit5");
+  
+  $form['produits'] = array(
+    '#type' => 'select',
+    '#title' => t('Produits'),
+    '#attributes' => array('Class' => 'input tokenize-sample', 'multiple' => 'multiple','name' => 'produits[]','ng-model' => 'produit'),
+    '#options' => $produits,
+  );               
+
+  return $form;
+}

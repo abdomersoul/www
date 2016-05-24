@@ -1,0 +1,137 @@
+<?php
+
+ 
+/**
+ * Implements hook_block_info().
+ */
+function recherche_avance_block_info() {
+  $blocks = array();
+
+  $blocks['recherche_avance'] = array(
+    'info' => t('Annuiare formulaire de Recherche avance'), 
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function recherche_avance_block_view($delta = '') {
+  $block = array();
+
+  $block['subject'] = t('Recherche guidée');
+  $block['content'] = drupal_get_form('recherche_avance_form');
+ 
+  return $block;
+}
+
+
+function recherche_avance_form($form, &$form_state) {
+
+
+  db_set_active('db2');
+
+  /** Liste des Filiere produit **/
+   $query = db_select('export', 'f')
+      ->distinct()
+      ->orderBy('Secteur', 'ASC')
+      ->fields('f', array('Secteur'));
+
+    $results = $query->execute();
+
+    $fp = array("-1" => "Choisissez une option");
+    foreach ($results as $result) {
+      $fp[$result->Secteur] = $result->Secteur;
+    }
+
+
+    /** Liste des marche **/
+   $query = db_select('export', 'f')
+      ->distinct()
+      ->orderBy('dest_marche', 'ASC')
+      ->fields('f', array('code_dest_marche','dest_marche'));
+
+    $results = $query->execute();
+
+    $m = array("-1" => "Choisissez une option");
+    foreach ($results as $result) {
+      $m[$result->code_dest_marche] = $result->dest_marche;
+    }
+
+  db_set_active();
+
+  
+
+  $form['filierproduit'] = array(
+    '#type' => 'select',
+    '#title' => t('Filière produit'),
+    '#attributes' => array('Class' => 'input'),
+    '#options' => $fp,
+  );
+
+  $form['familleproduit'] = array(
+    '#type' => 'select',
+    '#title' => t('Famille produit'),
+    '#attributes' => array('Class' => 'input'),
+  );
+
+  $form['sousfamilleproduit'] = array(
+    '#type' => 'select',
+    '#title' => t('Sous famille produit'),
+    '#attributes' => array('Class' => 'input'),
+  );
+
+  $form['produit'] = array(
+    '#type' => 'select',
+    '#title' => t('Produit'),
+    '#attributes' => array('Class' => 'input'),
+  );
+
+  $form['marche'] = array(
+    '#type' => 'select',
+    '#title' => t('Marché'),
+    '#attributes' => array('Class' => 'input'),
+    '#options' => $m,
+  );
+
+  $form['pays'] = array(
+    '#type' => 'select',
+    '#title' => t('Pays'),
+    '#attributes' => array('Class' => 'input'),
+  );
+  
+  $form['raisonsociale'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Raison sociale'),
+    '#attributes' => array('Class' => 'input'),
+  );
+
+   $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Rechercher'),
+    '#attributes' => array('id' => 'btnsubmit', 'Class' => 'btnsubmit'),
+  );                   
+
+  $form['#attached']['js'] = array(
+    drupal_get_path('module', 'recherche_avance') . '/script.js',
+  );
+
+  return $form;
+}
+
+function recherche_avance_form_submit($form, &$form_state){
+  $options = array('query' => array(
+                              'searchtype' => 'ra',
+                              'filierproduit' => $form_state["values"]["filierproduit"],
+                              'familleproduit' => $form_state["values"]["familleproduit"],
+                              'sousfamilleproduit' => $form_state["values"]["sousfamilleproduit"],
+                              'produit' => $form_state["values"]["produit"],
+                              'marche' => $form_state["values"]["marche"],
+                              'pays' => $form_state["values"]["pays"],
+                              'raisonsociale' => $form_state["values"]["raisonsociale"]
+                              ));
+  drupal_goto("listexportateur",$options);
+    
+}
+

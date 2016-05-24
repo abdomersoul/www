@@ -1,0 +1,7 @@
+name = exportateur_listeunscri
+description = isteunscri exportateur
+package = Annuaire
+core = 7.x
+
+files[] = exportateur_listeunscri.module
+
