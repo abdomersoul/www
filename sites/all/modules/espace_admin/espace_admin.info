@@ -1,0 +1,6 @@
+name = Espace Administrateur
+description = Module d'authentification de l'admin
+package = Annuaire
+core = 7.x
+
+files[] = espace_admin.module

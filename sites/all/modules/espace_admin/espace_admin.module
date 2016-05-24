@@ -1,0 +1,1548 @@
+<?php
+
+
+function espace_admin_menu() {
+
+  $items = array();
+
+    $items['espace_admin'] = array(
+      'title' => 'Espace privé',
+      'page callback' => 'espace_admin_view',
+      'access arguments' => array('access content'),
+      'access callback' => TRUE
+  );
+
+    $items['espace_admin_suivi_inscription'] = array(
+      'title' => 'Mise à jour des données des exportateurs',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('espace_admin_suivi_form'),
+      'access callback' => TRUE
+  );
+
+
+  $items['espace_admin_abonnement'] = array(
+      'title' => 'Complément d\'informations pour abonnement',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('espace_admin_abo_form'),
+      'access callback' => TRUE
+  );
+  
+  $items['espace_admin_suivi_abonnement_exportateurs'] = array(
+      'title' => 'Suivi des abonnements des exportateurs',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('espace_admin_suivi_abo_form'),
+      'access callback' => TRUE
+  );
+
+  $items['espace_admin_liste_demande_devis'] = array(
+      'title' => 'Liste des demandes de devis',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('espace_admin_liste_devis_form'),
+      'access callback' => TRUE
+  );
+
+  $items['validerAbonnement'] = array(
+      'title' => 'Liste des demandes de devis',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('validerAbonnement_myform'),
+      'access callback' => TRUE
+  );
+
+  $items['detailAbonnement'] = array(
+      'title' => 'Liste des demandes de devis',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('detailAbonnement_form'),
+      'access callback' => TRUE
+  );
+
+  return $items;
+}
+
+function espace_admin_view($delta = '')
+{
+
+    if (!isset($_SESSION["expotusername"]) || isset($_SESSION["expotusername"]) && empty($_SESSION["expotusername"])) 
+      drupal_goto("<front>");
+
+    if (!isset($_SESSION["role"]) || isset($_SESSION["role"]) && empty($_SESSION["role"]) || $_SESSION["role"]!='admin') 
+        drupal_goto("<front>");
+
+    $view = '';
+    $view .= "<div class='sidebar-filter'><h2>Menu</h2><ul>";
+    $view .= '<li><a href="listinscription">Suivi des inscriptions en ligne des exportateurs</a></li>';
+    $view .= '<li><a href="espace_admin_suivi_inscription">Mise à jour des données des exportateurs</a></li>';
+    $view .= '<li><a href="espace_admin_liste_demande_devis">Liste des demandes de devis</a></li>';
+    $view .= '<li><a href="espace_admin_suivi_abonnement_exportateurs">Suivi des abonnements des exportateurs</a></li>';
+    $view .= '</div></ul>';
+    $view .= '<div class="export_main">';
+    $view .= '<p>Le Lorem Ipsum est simplement du faux texte employé dans la composition et la mise en page avant impression. Le Lorem Ipsum est le faux texte standard de l\'imprimerie depuis les années 1500, quand un peintre anonyme assembla ensemble des morceaux de texte pour réaliser un livre spécimen de polices de texte. Il n\'a pas fait que survivre cinq siècles, mais s\'est aussi adapté à la bureautique informatique, sans que son contenu n\'en soit modifié. Il a été popularisé dans les années 1960 grâce à la vente de feuilles Letraset contenant des passages du Lorem Ipsum, et, plus récemment, par son inclusion dans des applications de mise en page de texte, comme Aldus PageMaker.</p>';
+    $view .= '</div>';
+
+
+    return $view;
+
+}
+
+function espace_admin_abo_form($form, &$form_state) 
+{
+  if (!isset($_SESSION["expotusername"]) || isset($_SESSION["expotusername"]) && empty($_SESSION["expotusername"])) 
+      drupal_goto("<front>");
+
+  if (!isset($_SESSION["role"]) || isset($_SESSION["role"]) && empty($_SESSION["role"]) || $_SESSION["role"]!='admin') 
+        drupal_goto("<front>");
+
+	if(isset($_GET["idExp"]))
+		$idExp = $_GET["idExp"];
+
+	$mail_export="atlantis1@menara.ma";
+	db_set_active('db2');
+
+    $query = db_select('exportateur', 'e')
+        ->condition('Id_Exportateur', $idExp,'=')
+        ->fields('e');
+      
+      $count_results = $query->execute()->rowCount();
+
+      $results = $query->execute()->fetchObject();
+
+  db_set_active();
+
+  $datetime = DateTime::createFromFormat('Y-m-d', $results->DATCRE);
+  
+
+  $id_export = $results->Id_Exportateur;
+  $statut_juridique = $results->Categorie;
+  $description = $results->Description;
+  $datecreation = $datetime->format('d/m/Y');
+  $effectif = $results->Effectif;
+  $capital = $results->Capital;
+  $affiliation = $results->Affiliation;
+  $ca = $results->CA;
+  $resp = $results->RESP;
+  $tel_resp = $results->Tel_Resp;
+  $site_web = $results->Site_Web;
+  $catalogue = $results->Catalogue;
+  $video = $results->Video;
+  $logo = $results->Img;
+
+
+
+  $form['#attributes'] = array('enctype' => "multipart/form-data");
+
+   $form['#attached']['js'] = array(
+    drupal_get_path('module', 'espace_admin') . '/script.js',
+  );
+
+
+  $form['back'] = array(
+    '#type' => 'markup',
+    '#markup' => '<a href="/espace_admin_suivi_inscription" class="backtoboard">Retour</a>',
+  );
+
+
+  $typeabn = array(0 => t('Standard '));
+
+  $form['exportid'] = array(
+    '#type' => 'hidden',
+    '#default_value' => $id_export,
+    '#attributes' => array( 'id' => 'exportid'),
+  );
+
+  $form['typeabn'] = array(
+    '#type' => 'radios',
+    '#title' => t('Type d’abonnement '),
+    '#default_value' => 0,
+    '#options' => $typeabn,
+  );
+
+  $form['profil_entrprise'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Profil général de l\'entreprise : '),
+    '#collapsible' => TRUE, // Added
+    '#collapsed' => FALSE,  // Added
+  );
+
+  $Statut = array(0 => t('SARL'),1 => t('SA'));
+  $form['profil_entrprise']['statut_juridique'] = array(
+    '#type' => 'select',
+    '#title' => t('Statut juridique'),
+    '#default_value' => $statut_juridique,
+    '#options' => $Statut,
+    '#required' => TRUE,
+  );
+
+  $form['profil_entrprise']['description'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Description'),
+    '#required' => TRUE,
+    '#default_value' => $description,
+  );
+  
+  drupal_add_library('system','ui.datepicker');
+  drupal_add_js('jQuery(document).ready(function(){jQuery( ".pickadate" ).datepicker({
+    dateFormat: "dd/mm/yy",
+    autoSize: true
+  });});', 'inline'); 
+
+  $form['profil_entrprise']['date_creation'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Date de création'),
+    '#attributes' => array('class' => array('pickadate')),
+    '#required' => TRUE,
+    '#default_value' => $datecreation,
+  );
+
+  $form['profil_entrprise']['effectif'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Effectif'),
+    '#attributes' => array( 'Class' => 'numerique'),
+    '#default_value' => $effectif,
+  );
+
+  $form['profil_entrprise']['capital_sociale'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Capital social (DH)'),
+    '#attributes' => array( 'Class' => 'numerique money'),
+    '#default_value' => $capital,
+  );
+
+  $form['profil_entrprise']['ca'] = array(
+    '#type' => 'textfield',
+    '#title' => t('CA (DH): '),
+    '#attributes' => array( 'Class' => 'numerique money'),
+    '#default_value' => $ca,
+  );
+
+  $form['profil_entrprise']['pers_cont'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Personne à contacter: '),
+    '#required' => TRUE,
+    '#default_value' => $resp,
+  );
+
+  $form['profil_entrprise']['tel_pers_cont'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Tél(Personne à contacter): '),
+    '#required' => TRUE,
+    '#default_value' => $tel_resp,
+  );
+
+  $form['profil_entrprise']['video'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Video(Lien youtube): '),
+    '#default_value' => $video,
+  );
+
+  $form['profil_entrprise']['site_web'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Site web: '),
+    '#default_value' => $site_web,
+  );
+
+  $form['profil_entrprise']['catalogue_plaquette'] = array(
+    '#type' => 'managed_file',
+    '#upload_location' => 'public://',
+    '#title' => t('Catalogue / plaquette'),
+    '#default_value' => $catalogue,
+  );
+
+  if(!empty($AR_EACCE)){
+    $oldlink = $GLOBALS['base_url'].'/sites/default/files/'.$catalogue;
+  $form['profil_entrprise']['catalogue_plaquette_link'] = array(
+      '#type' => 'markup',
+      '#markup' => '<a href="/sites/default/files/'.$oldlink.'" Class = "input oldcatalogue" "target" = "_blank" >Catalogue Plaquette</a>',
+  );
+  }
+  
+
+
+  $form['profil_entrprise']['oldlogo'] = array(
+    '#type' => 'hidden',
+    '#default_value' => $logo,
+  );
+
+  $form['profil_entrprise']['logo'] = array(
+    '#type' => 'managed_file',
+    '#upload_location' => 'public://',
+    '#title' => t('Logo : '),
+    '#required' => empty($logo) ? TRUE : FALSE,
+    '#attributes' => array( 'Class' => 'inputfile'),
+  );
+
+  if(!empty($logo)){
+      $form['profil_entrprise']['logoview'] = array(
+    '#type' => 'markup',
+    '#markup' => '<img src="/sites/default/files/'.$logo.'" class="logoview">',
+  );
+
+  }
+
+
+
+
+  $form['produits_exportes'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Produits exportés : '),
+    '#collapsible' => TRUE, // Added
+    '#collapsed' => FALSE,  // Added
+  );
+
+  $Statut = array('-1' => t('Choisissez une option'),'AGRUMES' => t('AGRUMES'),'PRIMEURS' => t('PRIMEURS'),'PRODUITS DE LA PECHE' => t('PRODUITS DE LA PECHE'),'PRODUITS TRANSFORMES D ORIGINE VEGETALE' => t('PRODUITS TRANSFORMES D ORIGINE VEGETALE'));
+
+  $form['produits_exportes']['secteur'] = array(
+    '#type' => 'select',
+    '#title' => t('secteur: '),
+    '#options' => $Statut,
+    '#required' => FALSE,
+  );
+
+  $form['produits_exportes']['produitFamille'] = array(
+    '#type' => 'select',
+    '#title' => t('Famille produit: '),
+    '#required' => FALSE,
+  );
+
+  $form['produits_exportes']['SousProduitFamille'] = array(
+    '#type' => 'select',
+    '#title' => t('Sous Famille produit: '),
+    '#required' => FALSE,
+  );
+
+  $form['produits_exportes']['produit'] = array(
+    '#type' => 'select',
+    '#title' => t('Produit: '),
+    '#default_value' => $produit,
+    '#required' => FALSE,
+  );
+
+  $form['produits_exportes']['btnproduit'] = array(
+    '#type' => 'markup',
+    '#markup' => '<input type="button" id="edit-btnproduit" value="+" >',
+  );
+
+  db_set_active('db2');
+
+    $listProduit = "";
+    $pdata = db_query("SELECT distinct Produit FROM export_produits WHERE id_exportateur = '".$id_export."' Order by produit")->fetchAll();
+    foreach ($pdata as $p) {
+      $listProduit .= "<tr><td>".$p->Produit."</td>
+                          <td class='actions'>
+                            <a href='#' class='btnsupp' data-name='".$p->Produit."'>Supprimer</a>
+                          </td></tr>";
+    }
+  db_set_active();
+
+  $form['produits_exportes']['table_produit'] = array(
+    '#type' => 'markup',
+    '#markup' => '<table class="tabliste" id="listProduit"><thead><th>Produits</th><th>Actions</th></thead><tbody>'.$listProduit.'
+                    </tbody></table>',
+  );
+
+
+
+
+  $form['marche_export'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('marche d\'export : '),
+    '#collapsible' => TRUE, // Added
+    '#collapsed' => FALSE,  // Added
+  );
+  
+
+  $Statut = array('-1' => t('Choisissez une option'), '4' => t('Afrique'), '10' => t('Amérique du Nord'), '11' => t('Amérique du Sud'), '8' => t('Asie') , '13' => t('Australie'), '1' => t('Europe') ,'6' => t('Moyen Orient') ,'2' => t('Russie'));
+
+  $form['marche_export']['marche'] = array(
+    '#type' => 'select',
+    '#title' => t('Marché: '),
+    '#default_value' => $produit,
+    '#options' => $Statut,
+    '#required' => FALSE,
+  );
+
+  $allPays = array();
+
+  $dataPays = db_query("SELECT distinct code_dest_pays, dest_pays FROM export ORDER BY dest_pays");
+  foreach ($dataPays as $p) 
+  {
+    $allPays[$p->code_dest_pays] = $p->dest_pays ;
+  }
+  
+
+  $form['marche_export']['pays'] = array(
+    '#type' => 'select',
+    '#title' => t('Pays: '),
+    '#default_value' => $produit,
+    '#options' => $allPays,
+    '#required' => FALSE,
+  );
+
+  $form['marche_export']['btnmarche'] = array(
+    '#type' => 'markup',
+    '#markup' => '<input type="button" id="edit-btnmarche" value="+" >',
+  );
+
+  db_set_active('db2');
+
+    $listMarche = "";
+    $pdata = db_query("SELECT distinct marche,pays FROM export_marche WHERE idexport = '".$id_export."' Order by marche")->fetchAll();
+    foreach ($pdata as $p) {
+      $listMarche .= "<tr><td>".$p->marche."</td>
+                          <td>".$p->pays."</td>
+                          <td class='actions'>
+                            <a href='#' class='btnsupp' data-name='".$p->pays."'>Supprimer</a>
+                          </td></tr>";
+    }
+  db_set_active();
+
+  $form['marche_export']['table_marche'] = array(
+    '#type' => 'markup',
+    '#markup' => '<table class="tabliste" id="listMarche"><thead><th>Marchés</th><th>Pays</th><th>Actions</th></thead><tbody>'.$listMarche.'
+                    </tbody></table>',
+  );
+
+
+
+
+
+
+  $form['marques_entrprise'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Marques de l\'entreprise : '),
+    '#collapsible' => TRUE, // Added
+    '#collapsed' => FALSE,  // Added
+  );
+
+  $form['marques_entrprise']['marque'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Marque: '),
+  );
+
+  $form['marques_entrprise']['btnmarque'] = array(
+    '#type' => 'markup',
+    '#markup' => '<input type="button" id="edit-btnmarque" value="+" >',
+  );
+
+  db_set_active('db2');
+
+    $listMarque = "";
+    $pdata = db_query("SELECT distinct marque FROM export_marques WHERE idexport = '".$id_export."' Order by marque")->fetchAll();
+    foreach ($pdata as $p) {
+      $listMarque .= "<tr><td>".$p->marque."</td>
+                          <td class='actions'>
+                            <a href='#' class='btnmdfy' data-name='".$p->marque."'>Modifier</a>
+                            <a href='#' class='btnconf' style='display:none' data-name='".$p->marque."'>Confirmer</a>
+                            <a href='#' class='btnsupp' data-name='".$p->marque."'>Supprimer</a>
+                          </td></tr>";
+    }
+  db_set_active();
+
+  $form['marques_entrprise']['table_marque'] = array(
+    '#type' => 'markup',
+    '#markup' => '<table class="tabliste" id="listMarques"><thead><th>Marques</th><th>Actions</th></thead><tbody>'.$listMarque.'
+                    </tbody></table>',
+  );
+
+  $form['certif_entrprise'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Certifications : '),
+    '#collapsible' => TRUE, // Added
+    '#collapsed' => FALSE,  // Added
+  );
+
+  $form['certif_entrprise']['certification'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Certification: '),
+  );
+  
+
+  $form['certif_entrprise']['btncertif'] = array(
+    '#type' => 'markup',
+    '#markup' => '<input type="button" id="edit-btncertif" value="+" >',
+  );
+
+  db_set_active('db2');
+
+    $listcertif = "";
+    $pdata = db_query("SELECT distinct certif FROM export_certifs WHERE idexport = '".$id_export."' Order by certif")->fetchAll();
+    foreach ($pdata as $p) {
+      $listcertif .= "<tr><td>".$p->certif."</td>
+                          <td class='actions'>
+                            <a href='#' class='btnmdfy' data-name='".$p->certif."'>Modifier</a>
+                            <a href='#' class='btnconf' style='display:none' data-name='".$p->certif."'>Confirmer</a>
+                            <a href='#' class='btnsupp' data-name='".$p->certif."'>Supprimer</a>
+                          </td></tr>";
+    }
+  db_set_active();
+
+  $form['certif_entrprise']['table_certif'] = array(
+    '#type' => 'markup',
+    '#markup' => '<table class="tabliste" id="listcertif"><thead><th>Certifications</th><th>Actions</th></thead><tbody>'.$listcertif.'</tbody></table>',
+  );
+
+  $form['obligatoire'] = array(
+    '#type' => 'markup',
+    '#markup' => '<div class="obligatoire">Les champs en (*) sont obligatoires</div>',
+  );
+
+  $form['eid'] = array('#type' => 'hidden','#attributes' => array( 'id' => 'eid'), '#value' => $id_export);
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('S’abonner'),
+    '#attributes' => array('id' => 'btnsubmit', 'Class' => 'btnsubmit'),
+  );
+
+  $form['#validate'][] = 'espace_admin_abo_form_validate';
+  return $form;
+
+}
+
+function espace_admin_abo_form_validate($form, &$form_state)
+{
+
+  $error_messages = array();
+
+  if ($form_state['values']['tel_pers_cont'] != '')
+    if (!preg_match("#^0[0-9]{9}$#", $form_state['values']['tel_pers_cont']))
+      $error_messages["body"][] = 'Le numéro de téléphone n\'est pas valide.';
+
+  if ($form_state['values']['date_creation'] != '')
+    if (!preg_match("/^(0[1-9]|[1-2][0-9]|3[0-1])\/(0[1-9]|1[0-2])\/[0-9]{4}$/",$form_state['values']['date_creation']))
+      $error_messages["body"][] = 'La date n\'est pas valide.';
+  
+
+  foreach ($error_messages as $element => $messages) {
+    form_set_error($element, theme('item_list', array('items' => $messages)));
+  }
+
+}
+
+function espace_admin_abo_form_submit($form, &$form_state) 
+{ 
+
+  try {
+    if (!empty($form_state['values']['catalogue_plaquette'])) {
+        $file_cat = file_load($form_state['values']['catalogue_plaquette']);
+        $file_cat->status = 0;
+        $file_name_cat = $file_cat->filename;
+        file_save($file_cat);
+        $usage = file_usage_list($file_cat);
+
+    }
+
+    if (!empty($form_state['values']['logo'])) {
+        $file_logo = file_load($form_state['values']['logo']);
+        $file_logo->status = 0;
+        $file_name_logo = $file_logo->filename;
+        //file_usage_add($file_logo, 'module_name', 'entity_name', $entity_id);
+        file_save($file_logo);
+        $usage = file_usage_list($file_logo);
+    }
+  db_set_active('db2');
+
+  $datetime = DateTime::createFromFormat('d/m/yy', $form_state['values']['date_creation']);
+
+    $values = array(
+                ':NEXPT' => $form_state['values']['eid'],
+                ':Categorie' => $form_state['values']['statut_juridique'],
+                ':Description'=> $form_state['values']['description'],
+                ':DATCRE' => $datetime->format('Y-m-d'),
+                ':Effectif' => $form_state['values']['effectif'], 
+                ':Capital' => $form_state['values']['capital_sociale'], 
+                ':CA' => $form_state['values']['ca'], 
+                ':RESP' => $form_state['values']['pers_cont'], 
+                ':Tel_Resp' => $form_state['values']['tel_pers_cont'], 
+                ':Site_Web' => $form_state['values']['site_web'], 
+                ':Catalogue' => $file_name_cat, 
+                ':Video' => $form_state['values']['video'], 
+                ':Img' => !empty($form_state['values']['logo']) ? $file_name_logo : $form_state['values']['oldlogo'], 
+              );
+  
+    $q = "UPDATE exportateur SET Categorie = :Categorie, Description = :Description, DATCRE = :DATCRE, Effectif = :Effectif, Capital = :Capital, CA = :CA, RESP = :RESP, Tel_Resp = :Tel_Resp, Site_Web = :Site_Web, Catalogue = :Catalogue, Video = :Video, Img = :Img WHERE Id_Exportateur = :NEXPT";
+    $res_sc = db_query($q, $values);
+    db_set_active();
+
+    if($res_sc)
+    	drupal_set_message(t('Votre abonnement est bien enregistrée.  '.$form_state['values']['effectif']));
+    else
+    	drupal_set_message(t('Update failed'));
+
+
+    } catch (Exception $e) { die($e->getmessage()); }
+
+}
+
+
+function espace_admin_suivi_form($form, &$form_state) 
+{
+
+  if (!isset($_SESSION["expotusername"]) || isset($_SESSION["expotusername"]) && empty($_SESSION["expotusername"])) 
+      drupal_goto("<front>");
+
+  if (!isset($_SESSION["role"]) || isset($_SESSION["role"]) && empty($_SESSION["role"]) || $_SESSION["role"]!='admin') 
+        drupal_goto("<front>");
+
+	$form['back'] = array(
+    '#type' => 'markup',
+    '#markup' => '<a href="/espace_admin" class="backtoboard">Retour</a>',
+ 	 );
+
+  $form['critererecherche'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Critères de recherche: '),
+    '#collapsible' => FALSE, // Added
+    '#collapsed' => FALSE,  // Added
+    '#attributes' => array('Class' => 'fieldsetdev'),
+  );
+
+   $form['page'] = array(
+    '#type' => 'hidden',
+    '#default_value' => (isset($_GET["page"]) && !empty($_GET["page"])) ? $_GET["page"] : '1',
+    '#attributes' => array( 'id' => 'page'),
+  );
+
+   $form['perpage'] = array(
+    '#type' => 'hidden',
+    '#default_value' => (isset($_GET["perpage"]) && !empty($_GET["perpage"])) ? $_GET["perpage"] : '1',
+    '#attributes' => array( 'id' => 'perpage'),
+  );
+
+   $pageSize = intval(10);
+   $perpage = (isset($_GET['perpage']) && !empty($_GET['perpage']) && intval($_GET['perpage']) >= 10 ) ? $_GET['perpage'] : 10;
+
+   if(isset($_GET["page"]))
+   {
+   		$pageNumber = $_GET["page"];
+   		$offset = intval (($pageNumber - 1) * $perpage);
+   }
+   else
+   {
+   		$pageNumber=1;
+   		$offset = intval (0);
+   }
+
+   $nextPageNumber = intval($pageNumber+1);
+   $prevPageNumber = intval($pageNumber-1);
+   if($prevPageNumber<1)
+   		$prevPageNumber=1;
+
+  drupal_add_library('system','ui.datepicker');
+  drupal_add_js('jQuery(document).ready(function(){jQuery( ".pickadate" ).datepicker({
+    dateFormat: "dd/mm/yy",
+    autoSize: true
+  });});', 'inline'); 
+
+ 
+  $form['critererecherche']['date_du'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Date inscription'),
+    '#attributes' => array('class' => array('pickadate', 'input', 'date'), 'Placeholder' => "jj/mm/aaaa"),
+    '#default_value' => (isset($_GET["du"]) && !empty($_GET["du"])) ? $_GET["du"] : '',
+  );
+
+  $form['critererecherche']['date_au'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Au :'),
+    '#attributes' => array('class' => array('pickadate', 'input', 'date'), 'Placeholder' => "jj/mm/aaaa"),
+    '#default_value' => (isset($_GET["au"]) && !empty($_GET["au"])) ? $_GET["au"] : '',
+  );
+
+
+  db_set_active('db2');
+
+  /** Liste des Filiere produit **/
+   $query = db_select('export', 'f')
+      ->distinct()
+      ->orderBy('secteur', 'ASC')
+      ->fields('f', array('secteur'));
+
+    $results = $query->execute();
+
+    $fp = array("" => "Tout");
+    foreach ($results as $result) {
+      $fp[$result->secteur] = $result->secteur;
+    }
+
+   
+	$Type = array('' => 'Tout','Négociant' => 'Négociant','Fabricant' => 'Fabricant');
+	$form['critererecherche']['typexpt'] = array(
+	'#type' => 'select',
+	'#title' => t('Type'),
+	'#options' => $Type,
+	'#default_value' => (isset($_GET["typexpt"]) && !empty($_GET["typexpt"])) ? $_GET["typexpt"] : '',
+	);
+
+
+
+  $form['critererecherche']['secteur'] = array(
+    '#type' => 'select',
+    '#title' => t('Secteur'),
+    '#options' => $fp,
+    '#default_value' => (isset($_GET["secteur"]) && !empty($_GET["secteur"])) ? $_GET["secteur"] : '',
+  );
+
+
+  $form['critererecherche']['Agrement_EACCE'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Agrement EACCE',
+    '#attributes' => array('class' => array('rc', 'input')),
+    '#default_value' => (isset($_GET["ae"]) && !empty($_GET["ae"])) ? $_GET["ae"] : '',
+  );
+
+  $form['critererecherche']['Agrement_ONSSA'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Agrement ONSSA',
+    '#attributes' => array('class' => array('rc', 'input')),
+    '#default_value' => (isset($_GET["ao"]) && !empty($_GET["ao"])) ? $_GET["ao"] : '',
+  );
+
+  $form['critererecherche']['N_RC'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Numero RC',
+    '#attributes' => array('class' => array('rc', 'input')),
+    '#default_value' => (isset($_GET["nrc"]) && !empty($_GET["nrc"])) ? $_GET["nrc"] : '',
+  );
+
+  $form['critererecherche']['raison_sociale'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Raison sociale :'),
+    '#attributes' => array('class' => array('rc', 'input')),
+    '#default_value' => (isset($_GET["rc"]) && !empty($_GET["rc"])) ? $_GET["rc"] : '',
+  );
+
+
+  $form['critererecherche']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Rechercher'),
+    '#attributes' => array('id' => 'btnsubmit', 'Class' => 'btnsubmit'),
+  );
+  $form['literesult'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Liste des résultats: '),
+    '#collapsible' => FALSE, // Added
+    '#collapsed' => FALSE,  // Added
+    '#attributes' => array('Class' => 'fieldsetdev'),
+  );
+
+  
+
+  try{
+      db_set_active('db2');
+
+        $datedu = DateTime::createFromFormat('d/m/yy', $_GET["du"]);
+        $dateau = DateTime::createFromFormat('d/m/yy', $_GET["au"]);
+
+
+          $q = "SELECT date_insc, DESEXPT, ville, tel, TYPEXP, ACTIVED,SECTEUR, id_exportateur, contact
+                FROM exportateur e
+                WHERE ACTIVED = 'Acceptée'  ";
+
+          $qCount = "SELECT Count(*) as pageNum
+                FROM exportateur e
+                WHERE ACTIVED = 'Acceptée'  ";
+          if(isset($_GET["du"]) && !empty($_GET["du"])) $q .= " AND date_insc >= '".$datedu->format('Y-m-d')."'";
+          if(isset($_GET["au"]) && !empty($_GET["au"])) $q .= " AND date_insc <= '".$dateau->format('Y-m-d')."'";
+          if(isset($_GET["rc"]) && !empty($_GET["rc"])) $q .= " AND DESEXPT LIKE '%".$_GET["rc"]."%'";
+          if(isset($_GET["secteur"]) && !empty($_GET["secteur"])) $q .= " AND secteur = '".$_GET["secteur"]."'";
+          if(isset($_GET["typexpt"]) && !empty($_GET["typexpt"])) $q .= " AND TYPEXP = '".$_GET["typexpt"]."'";
+          if(isset($_GET["ae"]) && !empty($_GET["ae"])) $q .= " AND N_EACCE = '".$_GET["ae"]."'";
+          if(isset($_GET["ao"]) && !empty($_GET["ao"])) $q .= " AND N_ONSSA = '".$_GET["ao"]."'";
+          if(isset($_GET["nrc"]) && !empty($_GET["nrc"])) $q .= " AND N_RC = '".$_GET["nrc"]."'";
+
+          if(isset($_GET["du"]) && !empty($_GET["du"])) $qCount .= " AND date_insc >= '".$datedu->format('Y-m-d')."'";
+          if(isset($_GET["au"]) && !empty($_GET["au"])) $qCount .= " AND date_insc <= '".$dateau->format('Y-m-d')."'";
+          if(isset($_GET["rc"]) && !empty($_GET["rc"])) $qCount .= " AND DESEXPT LIKE '%".$_GET["rc"]."%'";
+          if(isset($_GET["secteur"]) && !empty($_GET["secteur"])) $qCount .= " AND secteur = '".$_GET["secteur"]."'";
+          if(isset($_GET["typexpt"]) && !empty($_GET["typexpt"])) $qCount .= " AND TYPEXP = '".$_GET["typexpt"]."'";
+          if(isset($_GET["ae"]) && !empty($_GET["ae"])) $qCount .= " AND N_EACCE = '".$_GET["ae"]."'";
+          if(isset($_GET["ao"]) && !empty($_GET["ao"])) $qCount .= " AND N_ONSSA = '".$_GET["ao"]."'";
+          if(isset($_GET["nrc"]) && !empty($_GET["nrc"])) $qCount .= " AND N_RC = '".$_GET["nrc"]."'";
+
+          $q .= "LIMIT ".$perpage." OFFSET ".$offset;
+          
+          //echo var_dump($q);
+          $data = db_query($q)->fetchAll();
+          $count = db_query($qCount)->fetchObject();
+      db_set_active();
+
+     
+  } catch (Exception $e) {   die($e->getmessage()); }
+
+  foreach ($data as $p) {
+    $listeresult .= "<tr>
+                  <td>".$p->date_insc."</td>
+                  <td>".$p->DESEXPT."</td>
+                  <td>".$p->ville."</td>
+                  <td>".$p->tel."</td>
+                  <td>".$p->contact."</td>
+                  <td>".$p->SECTEUR."</td>
+                  <td>".$p->TYPEXP."</td>
+                  <td class='actions'>
+                    <a href='".$GLOBALS['base_url']."/detailsinscri?expt=".$p->id_exportateur."&du=".$_GET["du"]."&au=".$_GET["au"]."&statut=".$_GET["statut"]."&rc=".$_GET["rc"]."'>Ins</a>
+                 
+                    <a href='".$GLOBALS['base_url']."/espace_admin_abonnement?idExp=".$p->id_exportateur."'>Abn</a>
+                  </td>
+                  </tr>";
+  }
+
+
+  $page = (isset($_GET['page']) && !empty($_GET['page'])) ? $_GET['page'] : 1;
+  $npage = ($page >= floor($count->pageNum/10)) ? $page : $page + 1;
+  $ppage = ($page == 1) ? $page : $page - 1;
+
+  
+  $lastPage = (floor($count->pageNum/$perpage) > 0) ? floor($count->pageNum/$perpage) : 1;
+  $selectoption =  "";
+  $selectoption .=  ($perpage == 10) ? "<option value='10' selected>10</option>" : "<option value='10'>10</option>";
+  $selectoption .=  ($perpage == 30) ? "<option value='30' selected>30</option>" : "<option value='30'>30</option>";
+  $selectoption .=  ($perpage == 50) ? "<option value='50' selected>50</option>" : "<option value='50'>50</option>";
+
+  $url = $GLOBALS['base_url']."/espace_admin_suivi_inscription?du=".$_GET["du"]."&au=".$_GET["au"]."&rc=".$_GET["rc"].'&perpage='.$_GET["perpage"];
+  $urln = $url."&page=".$npage;
+  $urlp = $url."&page=".$ppage;
+  $selecturl = $GLOBALS['base_url']."/espace_admin_suivi_inscription?du=".$_GET["du"]."&au=".$_GET["au"]."&rc=".$_GET["rc"]."&page=".$page."&perpage=";
+
+
+  $form['literesult']['table_result'] = array(
+    '#type' => 'markup',
+    '#markup' => '<table><thead><tr><th>Date inscription</th><th>Raison sociale</th><th>Ville</th><th>Tél</th><th>Contact</th><th>Secteur</th><th>Type</th><th>Actions</th></tr></thead><tbody>'.$listeresult.'</tbody></table>',
+  );
+
+  $form['literesult']['paginate'] = array(
+    '#type' => 'markup',
+    '#markup' => '
+    <div class="paginate">
+    	<div class="perpage">La liste des résultats par page<select onchange="window.location.href=\''.$selecturl.'\' + this[this.selectedIndex].value">'. $selectoption .'</select>
+    	</div>
+    	<a class="prev" href="'.$urlp.'">prev</a>
+
+    	Page '.$pageNumber.' Sur '.$lastPage.'
+
+    	<a class="suiv" href="'.$urln.'">Suiv</a>
+
+    </div>',
+  );
+
+  $form['#prefix'] = '<div class="listinscr">';
+  $form['#suffix'] = '</div>';
+
+
+
+
+  $form['#validate'][] = 'espace_admin_suivi_form_validate';
+
+  return $form;
+  
+}
+
+function espace_admin_suivi_form_validate($form, &$form_state) 
+{
+
+  if ($form_state['values']['date_du'] != '')
+    if (!preg_match("/^(0[1-9]|[1-2][0-9]|3[0-1])\/(0[1-9]|1[0-2])\/[0-9]{4}$/",$form_state['values']['date_du']))
+      $error_messages["body"][] = 'La date DU n\'est pas valide.';
+
+  if ($form_state['values']['date_au'] != '')
+    if (!preg_match("/^(0[1-9]|[1-2][0-9]|3[0-1])\/(0[1-9]|1[0-2])\/[0-9]{4}$/",$form_state['values']['date_au']))
+      $error_messages["body"][] = 'La date AU n\'est pas valide.';
+  
+  foreach ($error_messages as $element => $messages) {
+    form_set_error($element, theme('item_list', array('items' => $messages)));
+  }
+
+}
+
+function espace_admin_suivi_form_submit($form, &$form_state) 
+{
+
+  $options = array('query' => array('du' => $form_state["values"]["date_du"], 'au' => $form_state["values"]["date_au"], 'statut' => $form_state["values"]["statut"],'rc' => $form_state["values"]["raison_sociale"] , 'secteur' => $form_state["values"]["secteur"] , 'typexpt' => $form_state["values"]["typexpt"] ,
+  	'ae' => $form_state["values"]["Agrement_EACCE"] , 'ao' => $form_state["values"]["Agrement_ONSSA"] , 'nrc' => $form_state["values"]["N_RC"] , 'page' => $form_state["values"]["page"],'perpage' => $form_state["values"]["page"]));
+  drupal_goto('espace_admin_suivi_inscription', $options);
+   
+}
+
+function espace_admin_suivi_abo_form($form, &$form_state)
+{
+
+  if (!isset($_SESSION["expotusername"]) || isset($_SESSION["expotusername"]) && empty($_SESSION["expotusername"])) 
+      drupal_goto("<front>");
+
+  if (!isset($_SESSION["role"]) || isset($_SESSION["role"]) && empty($_SESSION["role"]) || $_SESSION["role"]!='admin') 
+        drupal_goto("<front>");
+
+	$form['back'] = array(
+    '#type' => 'markup',
+    '#markup' => '<a href="/espace_admin" class="backtoboard">Retour</a>',
+  );
+
+  $form['critererecherche'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Critères de recherche: '),
+    '#collapsible' => FALSE, // Added
+    '#collapsed' => FALSE,  // Added
+    '#attributes' => array('Class' => 'fieldsetdev'),
+  );
+
+  drupal_add_library('system','ui.datepicker');
+  drupal_add_js('jQuery(document).ready(function(){jQuery( ".pickadate" ).datepicker({
+    dateFormat: "dd/mm/yy",
+    autoSize: true
+  });});', 'inline'); 
+
+ 
+  $form['critererecherche']['date_du'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Date inscription du :'),
+    '#attributes' => array('class' => array('pickadate', 'input', 'date'), 'Placeholder' => "jj/mm/aaaa"),
+    '#default_value' => (isset($_GET["du"]) && !empty($_GET["du"])) ? $_GET["du"] : '',
+  );
+
+  $form['critererecherche']['date_au'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Au :'),
+    '#attributes' => array('class' => array('pickadate', 'input', 'date'), 'Placeholder' => "jj/mm/aaaa"),
+    '#default_value' => (isset($_GET["au"]) && !empty($_GET["au"])) ? $_GET["au"] : '',
+  );
+
+  $Type = array('' => t('Tout'), 'Gold' => t('Gold'),'Pack Bienvenu' => t('Pack Bienvenu'));
+  $form['critererecherche']['Type'] = array(
+    '#type' => 'select',
+    '#title' => t('Type'),
+    '#options' => $Type,
+    '#default_value' => (isset($_GET["Type"]) && !empty($_GET["Type"])) ? $_GET["Type"] : '',
+  );
+
+  $form['critererecherche']['raison_sociale'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Raison sociale :'),
+    '#attributes' => array('class' => array('rc', 'input')),
+    '#default_value' => (isset($_GET["rc"]) && !empty($_GET["rc"])) ? $_GET["rc"] : '',
+  );
+
+
+  $form['critererecherche']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Rechercher'),
+    '#attributes' => array('id' => 'btnsubmit', 'Class' => 'btnsubmit'),
+  );
+  $form['literesult'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Liste des résultats: '),
+    '#collapsible' => FALSE, // Added
+    '#collapsed' => FALSE,  // Added
+    '#attributes' => array('Class' => 'fieldsetdev'),
+  );
+
+  $perpage = (isset($_GET['perpage']) && !empty($_GET['perpage']) && intval($_GET['perpage']) >= 10 ) ? $_GET['perpage'] : 10;
+
+  $pagel = (isset($_GET['page']) && !empty($_GET['page'])) ? $_GET['page'] : 0;
+  $pagel = ($_GET['page'] <= 1) ? 0 : ($_GET['page']*10)+1;
+
+
+  try{
+      db_set_active('db2');
+
+        $datedu = DateTime::createFromFormat('d/m/yy', $_GET["du"]);
+        $dateau = DateTime::createFromFormat('d/m/yy', $_GET["au"]);
+
+
+          $q = "SELECT date_insc, DESEXPT, ville, tel, TYPEXP, ACTIVED,SECTEUR,Contact, id_exportateur, Pack, Mail
+                FROM exportateur e
+                WHERE ACTIVED = 'Acceptée' AND ABV is null";
+
+          $qCount = "SELECT Count(*) as pageNum
+                FROM exportateur e
+                WHERE ACTIVED = 'Acceptée' AND ABV is null";
+
+          if(isset($_GET["du"]) && !empty($_GET["du"])) $q .= " AND date_insc >= '".$datedu->format('Y-m-d')."'";
+          if(isset($_GET["au"]) && !empty($_GET["au"])) $q .= " AND date_insc <= '".$dateau->format('Y-m-d')."'";
+          if(isset($_GET["rc"]) && !empty($_GET["rc"])) $q .= " AND DESEXPT LIKE '%".$_GET["rc"]."%'";
+          if(isset($_GET["Type"]) && !empty($_GET["Type"])) $q .= " AND Pack ='".$_GET["Type"]."'";
+
+          if(isset($_GET["du"]) && !empty($_GET["du"])) $qCount .= " AND date_insc >= '".$datedu->format('Y-m-d')."'";
+          if(isset($_GET["au"]) && !empty($_GET["au"])) $qCount .= " AND date_insc <= '".$dateau->format('Y-m-d')."'";
+          if(isset($_GET["rc"]) && !empty($_GET["rc"])) $qCount .= " AND DESEXPT LIKE '%".$_GET["rc"]."%'";
+          if(isset($_GET["Type"]) && !empty($_GET["Type"])) $qCount .= " AND Pack ='".$_GET["Type"]."'";
+
+          $q .= " LIMIT ". $pagel .",".$perpage;
+          
+          //echo var_dump($q);
+          $data = db_query($q)->fetchAll();
+          $count = db_query($qCount)->fetchObject();
+
+      db_set_active();
+
+     
+  } catch (Exception $e) {   die($e->getmessage()); }
+
+  foreach ($data as $p) {
+    $listeresult .= "<tr>
+                  <td>".$p->date_insc."</td>
+                  <td>".$p->DESEXPT."</td>
+                  <td>".$p->ville."</td>
+                  <td>".$p->tel."</td>
+                  <td>".$p->Contact."</td>
+                  <td>".$p->SECTEUR."</td>
+                  <td>".$p->Pack."</td>
+                  <td class='actions'>
+                    <a href='".$GLOBALS['base_url']."/validerAbonnement?id=".$p->id_exportateur."'>Val</a>
+                    <a href='".$GLOBALS['base_url']."/detailAbonnement?exportateurMail=".$p->Mail."'>Détails</a>
+                  </td></tr>";
+  }
+
+  $page = (isset($_GET['page']) && !empty($_GET['page'])) ? $_GET['page'] : 1;
+  $npage = ($page >= floor($count->pageNum/10)) ? $page : $page + 1;
+  $ppage = ($page == 1) ? $page : $page - 1;
+
+  $url = $GLOBALS['base_url']."/espace_admin_suivi_abonnement_exportateurs?du=".$_GET["du"]."&au=".$_GET["au"]."&rc=".$_GET["rc"]."&Type=".$_GET["Type"].'&perpage='.$_GET["perpage"];
+  $urln = $url."&page=".$npage;
+  $urlp = $url."&page=".$ppage;
+  $selecturl = $GLOBALS['base_url']."/espace_admin_suivi_abonnement_exportateurs?du=".$_GET["du"]."&au=".$_GET["au"]."&rc=".$_GET["rc"]."&Type=".$_GET["Type"]."&page=".$page."&perpage=";
+
+  $nbpage = (floor($count->pageNum/$perpage) > 0) ? floor($count->pageNum/$perpage) : 1;
+  $selectoption =  "";
+  $selectoption .=  ($perpage == 10) ? "<option value='10' selected>10</option>" : "<option value='10'>10</option>";
+  $selectoption .=  ($perpage == 30) ? "<option value='30' selected>30</option>" : "<option value='30'>30</option>";
+  $selectoption .=  ($perpage == 50) ? "<option value='50' selected>50</option>" : "<option value='50'>50</option>";
+
+  $form['literesult']['table_result'] = array(
+    '#type' => 'markup',
+    '#markup' => '<table><thead><tr><th>Date inscription</th><th>Raison sociale</th><th>Ville</th><th>Tél</th><th>Contact</th><th>Secteur</th><th>abonnement</th><th>Actions</th></tr></thead><tbody>'.$listeresult.'</tbody></table>
+    <div class="paginate">
+              <div class="perpage">La liste des résultats par page<select onchange="window.location.href=\''.$selecturl.'\' + this[this.selectedIndex].value">'. $selectoption .'</select>
+              </div>
+              <a class="prev" href="'.$urlp.'">prev</a>
+              Page '. $page .' Sur '. $nbpage .'
+              <a class="suiv" href="'.$urln.'">Sui</a>
+            </div>',
+  );
+
+  $form['#prefix'] = '<div class="listinscr">';
+  $form['#suffix'] = '</div>';
+
+  $form['#validate'][] = 'listeexportateurs_form_validate';
+
+  return $form;
+
+}
+
+function espace_admin_suivi_abo_form_validate($form, &$form_state) 
+{
+
+  if ($form_state['values']['date_du'] != '')
+    if (!preg_match("/^(0[1-9]|[1-2][0-9]|3[0-1])\/(0[1-9]|1[0-2])\/[0-9]{4}$/",$form_state['values']['date_du']))
+      $error_messages["body"][] = 'La date DU n\'est pas valide.';
+
+  if ($form_state['values']['date_au'] != '')
+    if (!preg_match("/^(0[1-9]|[1-2][0-9]|3[0-1])\/(0[1-9]|1[0-2])\/[0-9]{4}$/",$form_state['values']['date_au']))
+      $error_messages["body"][] = 'La date AU n\'est pas valide.';
+  
+  foreach ($error_messages as $element => $messages) {
+    form_set_error($element, theme('item_list', array('items' => $messages)));
+  }
+
+}
+
+function espace_admin_suivi_abo_form_submit($form, &$form_state)
+{
+
+  $options = array('query' => array('du' => $form_state["values"]["date_du"], 'au' => $form_state["values"]["date_au"], 'Type' => $form_state["values"]["Type"],'rc' => $form_state["values"]["raison_sociale"]));
+  drupal_goto('espace_admin_suivi_abonnement_exportateurs', $options);
+   
+}
+
+function espace_admin_liste_devis_form($form, &$form_state)
+{
+
+  if (!isset($_SESSION["expotusername"]) || isset($_SESSION["expotusername"]) && empty($_SESSION["expotusername"])) 
+      drupal_goto("<front>");
+
+  if (!isset($_SESSION["role"]) || isset($_SESSION["role"]) && empty($_SESSION["role"]) || $_SESSION["role"]!='admin') 
+        drupal_goto("<front>");
+
+  $form['back'] = array(
+    '#type' => 'markup',
+    '#markup' => '<a href="/espace_admin" class="backtoboard">Retour</a>',
+   );
+
+  $form['critererecherche'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Critères de recherche: '),
+    '#collapsible' => FALSE, // Added
+    '#collapsed' => FALSE,  // Added
+    '#attributes' => array('Class' => 'fieldsetdev'),
+  );
+
+   $form['page'] = array(
+    '#type' => 'hidden',
+    '#default_value' => (isset($_GET["page"]) && !empty($_GET["page"])) ? $_GET["page"] : '1',
+    '#attributes' => array( 'id' => 'page'),
+  );
+
+   $form['perpage'] = array(
+    '#type' => 'hidden',
+    '#default_value' => (isset($_GET["perpage"]) && !empty($_GET["perpage"])) ? $_GET["perpage"] : '1',
+    '#attributes' => array( 'id' => 'perpage'),
+  );
+
+   $pageSize = intval(10);
+   $perpage = (isset($_GET['perpage']) && !empty($_GET['perpage']) && intval($_GET['perpage']) >= 10 ) ? $_GET['perpage'] : 10;
+
+   if(isset($_GET["page"]))
+   {
+      $pageNumber = $_GET["page"];
+      $offset = intval (($pageNumber - 1) * $perpage);
+   }
+   else
+   {
+      $pageNumber=1;
+      $offset = intval (0);
+   }
+
+   $nextPageNumber = intval($pageNumber+1);
+   $prevPageNumber = intval($pageNumber-1);
+   if($prevPageNumber<1)
+      $prevPageNumber=1;
+
+  drupal_add_library('system','ui.datepicker');
+  drupal_add_js('jQuery(document).ready(function(){jQuery( ".pickadate" ).datepicker({
+    dateFormat: "dd/mm/yy",
+    autoSize: true
+  });});', 'inline'); 
+
+ 
+  $form['critererecherche']['date_du'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Date inscription'),
+    '#attributes' => array('class' => array('pickadate', 'input', 'date'), 'Placeholder' => "jj/mm/aaaa"),
+    '#default_value' => (isset($_GET["du"]) && !empty($_GET["du"])) ? $_GET["du"] : '',
+  );
+
+  $form['critererecherche']['date_au'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Au :'),
+    '#attributes' => array('class' => array('pickadate', 'input', 'date'), 'Placeholder' => "jj/mm/aaaa"),
+    '#default_value' => (isset($_GET["au"]) && !empty($_GET["au"])) ? $_GET["au"] : '',
+  );
+
+
+
+  $form['critererecherche']['Demandeur'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Demandeur',
+    '#attributes' => array('class' => array('rc', 'input')),
+    '#default_value' => (isset($_GET["Demandeur"]) && !empty($_GET["Demandeur"])) ? $_GET["Demandeur"] : '',
+  );
+
+  $form['critererecherche']['Exportateur'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Exportateur',
+    '#attributes' => array('class' => array('rc', 'input')),
+    '#default_value' => (isset($_GET["Exportateur"]) && !empty($_GET["Exportateur"])) ? $_GET["Exportateur"] : '',
+  );
+
+
+  $form['critererecherche']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Rechercher'),
+    '#attributes' => array('id' => 'btnsubmit', 'Class' => 'btnsubmit'),
+  );
+  $form['literesult'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Liste des résultats: '),
+    '#collapsible' => FALSE, // Added
+    '#collapsed' => FALSE,  // Added
+    '#attributes' => array('Class' => 'fieldsetdev'),
+  );
+
+  
+
+  try{
+      db_set_active('db2');
+
+        $datedu = DateTime::createFromFormat('d/m/yy', $_GET["du"]);
+        $dateau = DateTime::createFromFormat('d/m/yy', $_GET["au"]);
+
+
+          $q = "SELECT * FROM export_devis ed, exportateur e where e.Id_Exportateur = ed.id_exportateur  ";
+
+          $qCount = "SELECT Count(*) as pageNum FROM export_devis ed, exportateur e where e.Id_Exportateur = ed.id_exportateur  ";
+
+          if(isset($_GET["du"]) && !empty($_GET["du"])) $q .= " AND date_recu >= '".$datedu->format('Y-m-d')."'";
+          if(isset($_GET["au"]) && !empty($_GET["au"])) $q .= " AND date_recu <= '".$dateau->format('Y-m-d')."'";
+          if(isset($_GET["Demandeur"]) && !empty($_GET["Demandeur"])) $q .= " AND nom LIKE '%".$_GET["Demandeur"]."%'";
+          if(isset($_GET["Exportateur"]) && !empty($_GET["Exportateur"])) $q .= " AND DESEXPT LIKE '%".$_GET["Exportateur"]."%'";
+
+          if(isset($_GET["du"]) && !empty($_GET["du"])) $qCount .= " AND date_recu >= '".$datedu->format('Y-m-d')."'";
+          if(isset($_GET["au"]) && !empty($_GET["au"])) $qCount .= " AND date_recu <= '".$dateau->format('Y-m-d')."'";
+          if(isset($_GET["Demandeur"]) && !empty($_GET["Demandeur"])) $qCount .= " AND nom LIKE '%".$_GET["Demandeur"]."%'";
+          if(isset($_GET["Exportateur"]) && !empty($_GET["Exportateur"])) $qCount .= " AND DESEXPT LIKE '%".$_GET["Exportateur"]."%'";
+
+          $q .= "LIMIT ".$perpage." OFFSET ".$offset;
+          
+          //echo var_dump($q);
+          $data = db_query($q)->fetchAll();
+          $count = db_query($qCount)->fetchObject();
+      db_set_active();
+
+     
+  } catch (Exception $e) {   die($e->getmessage()); }
+
+  foreach ($data as $p) {
+    $listeresult .= "<tr>
+                  <td>".$p->date_recu."</td>
+                  <td>".$p->nom."</td>
+                  <td>".$p->pays."</td>
+                  <td>".$p->tel."</td>
+                  <td>".$p->DESEXPT."</td>
+                  <td class='actions'>
+                    <a href='".$GLOBALS['base_url']."/detailsDevis?idd=".$p->iddevis."'>Details</a>
+                  </td>
+                  </tr>";
+  }
+
+
+  $page = (isset($_GET['page']) && !empty($_GET['page'])) ? $_GET['page'] : 1;
+  $npage = ($page >= floor($count->pageNum/10)) ? $page : $page + 1;
+  $ppage = ($page == 1) ? $page : $page - 1;
+
+  
+  $lastPage = (floor($count->pageNum/$perpage) > 0) ? floor($count->pageNum/$perpage) : 1;
+  $selectoption =  "";
+  $selectoption .=  ($perpage == 10) ? "<option value='10' selected>10</option>" : "<option value='10'>10</option>";
+  $selectoption .=  ($perpage == 30) ? "<option value='30' selected>30</option>" : "<option value='30'>30</option>";
+  $selectoption .=  ($perpage == 50) ? "<option value='50' selected>50</option>" : "<option value='50'>50</option>";
+
+  $url = $GLOBALS['base_url']."/espace_admin_liste_demande_devis?du=".$_GET["du"]."&au=".$_GET["au"]."&Demandeur=".$_GET["Demandeur"]."&Exportateur=".$_GET["Exportateur"].'&perpage='.$_GET["perpage"];
+  $urln = $url."&page=".$npage;
+  $urlp = $url."&page=".$ppage;
+  $selecturl = $GLOBALS['base_url']."/espace_admin_liste_demande_devis?du=".$_GET["du"]."&au=".$_GET["au"]."&Demandeur=".$_GET["Demandeur"]."&Exportateur=".$_GET["Exportateur"]."&page=".$page."&perpage=";
+
+
+  $form['literesult']['table_result'] = array(
+    '#type' => 'markup',
+    '#markup' => '<table><thead><tr><th>Date demande</th><th>Demandeur</th><th>Pays</th><th>Tél</th><th>Exportateur</th><th>Actions</th></tr></thead><tbody>'.$listeresult.'</tbody></table>',
+  );
+
+  $form['literesult']['paginate'] = array(
+    '#type' => 'markup',
+    '#markup' => '
+    <div class="paginate">
+      <div class="perpage">La liste des résultats par page<select onchange="window.location.href=\''.$selecturl.'\' + this[this.selectedIndex].value">'. $selectoption .'</select>
+      </div>
+      <a class="prev" href="'.$urlp.'">prev</a>
+
+      Page '.$pageNumber.' Sur '.$lastPage.'
+
+      <a class="suiv" href="'.$urln.'">Suiv</a>
+
+    </div>',
+  );
+
+  $form['#prefix'] = '<div class="listinscr">';
+  $form['#suffix'] = '</div>';
+
+
+
+
+  $form['#validate'][] = 'espace_admin_liste_devis_form_validate';
+
+  return $form;
+
+}
+
+function espace_admin_liste_devis_form_validate($form, &$form_state) 
+{
+
+  if ($form_state['values']['date_du'] != '')
+    if (!preg_match("/^(0[1-9]|[1-2][0-9]|3[0-1])\/(0[1-9]|1[0-2])\/[0-9]{4}$/",$form_state['values']['date_du']))
+      $error_messages["body"][] = 'La date DU n\'est pas valide.';
+
+  if ($form_state['values']['date_au'] != '')
+    if (!preg_match("/^(0[1-9]|[1-2][0-9]|3[0-1])\/(0[1-9]|1[0-2])\/[0-9]{4}$/",$form_state['values']['date_au']))
+      $error_messages["body"][] = 'La date AU n\'est pas valide.';
+  
+  foreach ($error_messages as $element => $messages) {
+    form_set_error($element, theme('item_list', array('items' => $messages)));
+  }
+
+}
+
+function espace_admin_liste_devis_form_submit($form, &$form_state) 
+{
+
+  $options = array('query' => array('du' => $form_state["values"]["date_du"], 'au' => $form_state["values"]["date_au"], 'page' => $form_state["values"]["page"],'perpage' => $form_state["values"]["page"], 'Demandeur' => $form_state["values"]["Demandeur"] , 'Exportateur' => $form_state["values"]["Exportateur"]  ));
+  drupal_goto('espace_admin_liste_demande_devis', $options);
+   
+}
+
+function validerAbonnement_myform($form, &$form_state)
+{
+    if (isset($_GET["id"]))
+    {
+      $q = "Update exportateur SET abv = 'validée' where id_exportateur ='".$_GET["id"]."'";
+      db_query($q);
+      drupal_goto("espace_admin_suivi_abonnement_exportateurs");
+    } 
+    else
+      drupal_goto("espace_admin");
+}
+
+function detailAbonnement_form($form, &$form_state)
+{
+  if (!isset($_SESSION["expotusername"]) || isset($_SESSION["expotusername"]) && empty($_SESSION["expotusername"])) 
+      drupal_goto("<front>");
+
+  if (!isset($_SESSION["role"]) || isset($_SESSION["role"]) && empty($_SESSION["role"]) || $_SESSION["role"]!='admin') 
+      drupal_goto("<front>");
+
+  $exportateurMail = $_GET["exportateurMail"];
+
+  db_set_active('db2');
+
+    $query = db_select('exportateur', 'e')
+        ->condition('Mail', $exportateurMail,'=')
+        ->fields('e');
+      
+      $count_results = $query->execute()->rowCount();
+
+      $results = $query->execute()->fetchObject();
+
+  db_set_active();
+
+  $datetime = DateTime::createFromFormat('Y-m-d', $results->DATCRE);
+  $datetime2 = new DateTime($results->DATCRE);
+
+  $id_export = $results->Id_Exportateur;
+  $statut_juridique = $results->Categorie;
+  $description = $results->Description;
+  $datecreation = $datetime2->format('d/m/Y');
+  $effectif = $results->Effectif;
+  $capital = $results->Capital;
+  $affiliation = $results->Affiliation;
+  $ca = $results->CA;
+  $resp = $results->RESP;
+  $tel_resp = $results->Tel_Resp;
+  $site_web = $results->Site_Web;
+  $catalogue = $results->Catalogue;
+  $video = $results->Video;
+  $logo = $results->Img;
+
+  $form['#attributes'] = array('enctype' => "multipart/form-data");
+
+   $form['#attached']['js'] = array(
+    drupal_get_path('module', 'espace_export') . '/script.js',
+  );
+
+    $form['back'] = array(
+      '#type' => 'markup',
+      '#markup' => '<a href="/espace_admin_suivi_abonnement_exportateurs" class="backtoboard">Retour</a>',
+    );
+
+
+  $typeabn = array(0 => t('Standard '));
+
+  $form['exportid'] = array(
+    '#type' => 'hidden',
+    '#default_value' => $id_export,
+    '#attributes' => array( 'id' => 'exportid'),
+  );
+
+  $form['typeabn'] = array(
+    '#type' => 'radios',
+    '#title' => t('Type d’abonnement '),
+    '#default_value' => 0,
+    '#options' => $typeabn,
+    '#disabled' => TRUE,
+  );
+
+  $form['profil_entrprise'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Profil général de l\'entreprise : '),
+    '#collapsible' => TRUE, // Added
+    '#collapsed' => FALSE,  // Added
+    '#disabled' => TRUE,
+  );
+
+  $Statut = array(0 => t('SARL'),1 => t('SA'));
+  $form['profil_entrprise']['statut_juridique'] = array(
+    '#type' => 'select',
+    '#title' => t('Statut juridique'),
+    '#default_value' => $statut_juridique,
+    '#options' => $Statut,
+    '#required' => TRUE,
+    '#disabled' => TRUE,
+  );
+
+  $form['profil_entrprise']['description'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Description'),
+    '#required' => TRUE,
+    '#default_value' => $description,
+    '#disabled' => TRUE,
+  );
+  
+  drupal_add_library('system','ui.datepicker');
+  drupal_add_js('jQuery(document).ready(function(){jQuery( ".pickadate" ).datepicker({
+    dateFormat: "dd/mm/yy",
+    autoSize: true
+  });});', 'inline'); 
+
+  $form['profil_entrprise']['date_creation'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Date de création'),
+    '#attributes' => array('class' => array('pickadate')),
+    '#required' => TRUE,
+    '#default_value' => $datecreation,
+    '#disabled' => TRUE,
+  );
+
+  $form['profil_entrprise']['effectif'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Effectif'),
+    '#attributes' => array( 'Class' => 'numerique'),
+    '#default_value' => $effectif,
+    '#disabled' => TRUE,
+  );
+
+  $form['profil_entrprise']['capital_sociale'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Capital social (DH)'),
+    '#attributes' => array( 'Class' => 'numerique money'),
+    '#default_value' => $capital,
+    '#disabled' => TRUE,
+  );
+
+  $form['profil_entrprise']['ca'] = array(
+    '#type' => 'textfield',
+    '#title' => t('CA (DH): '),
+    '#attributes' => array( 'Class' => 'numerique money'),
+    '#default_value' => $ca,
+    '#disabled' => TRUE,
+  );
+
+  $form['profil_entrprise']['pers_cont'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Personne à contacter: '),
+    '#required' => TRUE,
+    '#default_value' => $resp,
+    '#disabled' => TRUE,
+  );
+
+  $form['profil_entrprise']['tel_pers_cont'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Tél(Personne à contacter): '),
+    '#required' => TRUE,
+    '#default_value' => $tel_resp,
+    '#disabled' => TRUE,
+  );
+
+  $form['profil_entrprise']['video'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Video(Lien youtube): '),
+    '#default_value' => $video,
+    '#disabled' => TRUE,
+  );
+
+  $form['profil_entrprise']['site_web'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Site web: '),
+    '#default_value' => $site_web,
+    '#disabled' => TRUE,
+  );
+
+
+
+  if(!empty($AR_EACCE)){
+    $oldlink = $GLOBALS['base_url'].'/sites/default/files/'.$catalogue;
+  $form['profil_entrprise']['catalogue_plaquette_link'] = array(
+      '#type' => 'markup',
+      '#markup' => '<a href="/sites/default/files/'.$oldlink.'" Class = "input oldcatalogue" "target" = "_blank" >Catalogue Plaquette</a>',
+  );
+  }
+  
+
+
+  $form['profil_entrprise']['oldlogo'] = array(
+    '#type' => 'hidden',
+    '#default_value' => $logo,
+    '#disabled' => TRUE,
+  );
+
+
+
+  if(!empty($logo)){
+      $form['profil_entrprise']['logoview'] = array(
+    '#type' => 'markup',
+    '#markup' => '<img src="/sites/default/files/'.$logo.'" class="logoview">',
+  );
+
+  }
+  
+  $form['marques_entrprise'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Marques de l\'entreprise : '),
+    '#collapsible' => TRUE, // Added
+    '#collapsed' => FALSE,  // Added
+    '#disabled' => TRUE,
+  );
+
+  db_set_active('db2');
+
+    $listMarque = "";
+    $pdata = db_query("SELECT distinct marque FROM export_marques WHERE idexport = '".$id_export."' Order by marque")->fetchAll();
+    foreach ($pdata as $p) {
+      $listMarque .= "<tr><td>".$p->marque."</td></tr>";
+    }
+  db_set_active();
+
+
+  $form['marques_entrprise']['table_marque'] = array(
+    '#type' => 'markup',
+    '#markup' => '<table class="tabliste" id="listMarques"><thead><th>Marques</th></thead><tbody>'.$listMarque.'
+                    </tbody></table>',
+    '#disabled' => TRUE,
+  );
+
+  $form['certif_entrprise'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Certifications : '),
+    '#collapsible' => TRUE, // Added
+    '#collapsed' => FALSE,  // Added
+    '#disabled' => TRUE,
+
+  );
+
+  
+
+
+  db_set_active('db2');
+
+    $listcertif = "";
+    $pdata = db_query("SELECT distinct certif FROM export_certifs WHERE idexport = '".$id_export."' Order by certif")->fetchAll();
+    foreach ($pdata as $p) {
+      $listcertif .= "<tr><td>".$p->certif."</td></tr>";
+    }
+  db_set_active();
+
+
+  $form['certif_entrprise']['table_certif'] = array(
+    '#type' => 'markup',
+    '#markup' => '<table class="tabliste" id="listcertif"><thead><th>Certifications</th></thead><tbody>'.$listcertif.'</tbody></table>',
+    '#disabled' => TRUE,
+  );
+
+ 
+
+  $form['eid'] = array('#type' => 'hidden','#attributes' => array( 'id' => 'eid'), '#value' => $id_export, '#disabled' => TRUE,
+);
+
+ 
+
+
+  return $form;
+
+
+}
+
+?>

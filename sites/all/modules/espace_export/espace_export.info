@@ -1,0 +1,6 @@
+name = Espace exportateur
+description = Module d'authentification des exportateur
+package = Annuaire
+core = 7.x
+
+files[] = espace_export.module
